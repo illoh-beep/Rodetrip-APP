@@ -343,6 +343,10 @@
       flex: 1;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 16px 12px;
       cursor: pointer;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
@@ -350,18 +354,40 @@
       position: relative;
       overflow: hidden;
     }
-    .battle-side img {
-      width: 100%;
-      flex: 1;
+    .battle-side .cover {
+      width: min(40vw, 220px);
+      height: min(40vw, 220px);
+      border-radius: var(--radius);
       object-fit: cover;
-      display: block;
+      background: var(--card2);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem;
+      flex-shrink: 0;
     }
-    .battle-side .side-label {
-      padding: 10px;
+    .battle-side .cover.placeholder {
+      background: linear-gradient(135deg, #2a2050, #1e1e40);
+    }
+    .battle-side .song-title {
+      font-size: 1.15rem;
+      font-weight: 800;
       text-align: center;
-      background: rgba(0,0,0,0.5);
+      line-height: 1.25;
+      word-break: break-word;
+    }
+    .battle-side .song-artist {
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.2;
+    }
+    .battle-side .owner-chip {
+      font-size: 0.72rem;
       font-weight: 700;
-      font-size: 0.9rem;
+      color: var(--accent2);
+      background: var(--card2);
+      border-radius: 99px;
+      padding: 3px 10px;
     }
     .battle-divider {
       display: flex;
@@ -399,8 +425,109 @@
       object-fit: cover;
       border-radius: var(--radius);
       box-shadow: 0 0 40px rgba(108, 99, 255, 0.5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 5rem;
+      background: linear-gradient(135deg, #2a2050, #1e1e40);
     }
     #screen-song-winner .crown { font-size: 4rem; }
+    #screen-song-winner .winner-title { font-size: 1.5rem; font-weight: 800; }
+    #screen-song-winner .winner-artist { font-size: 1rem; color: var(--muted); margin-top: 2px; }
+
+    /* ================================================
+       SONG BATTLE — OCR / REVIEW LIST
+    ================================================ */
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--card2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ocr-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 12px;
+    }
+    .ocr-status .txt { font-size: 0.95rem; }
+
+    .song-edit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .song-edit-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+    }
+    .song-edit-row .fields {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .song-edit-row input {
+      background: var(--card2);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      min-height: 38px;
+      touch-action: manipulation;
+      width: 100%;
+    }
+    .song-edit-row input.artist { font-size: 0.85rem; color: var(--muted); }
+    .song-edit-row input:focus { border-color: var(--accent); }
+    .song-edit-row .del {
+      width: 40px; height: 40px; min-height: 40px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--card2);
+      font-size: 1rem;
+    }
+
+    /* Review/dedupe text rows */
+    .review-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      border: 2px solid transparent;
+    }
+    .review-row.marked { border-color: var(--danger); background: rgba(230,57,70,0.12); }
+    .review-row .cover-sm {
+      width: 40px; height: 40px; border-radius: 6px;
+      object-fit: cover; flex-shrink: 0;
+      background: var(--card2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .review-row .meta { flex: 1; min-width: 0; }
+    .review-row .meta .t { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .review-row .meta .a { font-size: 0.82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .review-row .owner-tag {
+      font-size: 0.68rem; font-weight: 700; color: var(--accent2);
+      background: var(--card2); border-radius: 99px; padding: 2px 8px; flex-shrink: 0;
+    }
+    .review-row .mark-x { color: var(--danger); font-size: 1.1rem; opacity: 0; flex-shrink: 0; }
+    .review-row.marked .mark-x { opacity: 1; }
 
     /* ================================================
        KM SCHÄTZEN — SETUP
@@ -742,13 +869,13 @@
     <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
     <div>
       <h2>🎵 Song Battle</h2>
-      <p style="font-size:0.85rem">Jeder lädt ~20 Lieblingssongs hoch</p>
+      <p style="font-size:0.85rem">Jeder lädt 1 Screenshot seiner Songliste hoch</p>
     </div>
   </div>
 
   <div class="player-tabs" id="setup-tabs"></div>
 
-  <div id="setup-player-area" class="stack gap-12" style="flex:1"></div>
+  <div id="setup-player-area" class="stack gap-12" style="flex:1; overflow-y:auto"></div>
 
   <div style="margin-top:16px" class="stack gap-8">
     <div id="setup-progress" class="muted center" style="font-size:0.9rem"></div>
@@ -763,14 +890,14 @@
   <div class="screen-header">
     <button class="btn btn-ghost back-btn" onclick="showScreen('song-setup')">‹</button>
     <div>
-      <h2>Duplikate entfernen</h2>
-      <p style="font-size:0.85rem">Tippe auf Songs die doppelt sind</p>
+      <h2>Songs prüfen</h2>
+      <p style="font-size:0.85rem">Tippe Songs an, die doppelt/falsch sind</p>
     </div>
   </div>
 
   <div id="dedupe-count" class="badge" style="margin-bottom:12px; align-self:flex-start"></div>
 
-  <div id="dedupe-grid" class="song-grid" style="flex:1; align-content:start"></div>
+  <div id="dedupe-list" class="stack gap-8" style="flex:1; overflow-y:auto; align-content:start"></div>
 
   <div class="stack gap-8" style="margin-top:16px">
     <button class="btn btn-danger btn-sm" id="dedupe-delete-btn" onclick="deleteMarked()" style="display:none">🗑️ Markierte löschen</button>
@@ -790,13 +917,17 @@
 
   <div class="battle-arena">
     <div class="battle-side" id="battle-left" onclick="pickWinner('left')">
-      <img id="battle-img-left" src="" alt="Song A">
-      <div class="side-label" id="battle-name-left"></div>
+      <div class="cover placeholder" id="battle-cover-left">🎵</div>
+      <div class="song-title" id="battle-title-left"></div>
+      <div class="song-artist" id="battle-artist-left"></div>
+      <div class="owner-chip" id="battle-owner-left"></div>
     </div>
     <div class="battle-divider">VS</div>
     <div class="battle-side" id="battle-right" onclick="pickWinner('right')">
-      <img id="battle-img-right" src="" alt="Song B">
-      <div class="side-label" id="battle-name-right"></div>
+      <div class="cover placeholder" id="battle-cover-right">🎵</div>
+      <div class="song-title" id="battle-title-right"></div>
+      <div class="song-artist" id="battle-artist-right"></div>
+      <div class="owner-chip" id="battle-owner-right"></div>
     </div>
   </div>
 </div>
@@ -807,7 +938,11 @@
 <div id="screen-song-winner" class="screen">
   <div class="crown">🏆</div>
   <h2>Der beste Song!</h2>
-  <img id="winner-img" class="winner-img" src="" alt="Gewinner">
+  <div id="winner-img" class="winner-img">🎵</div>
+  <div class="center">
+    <div id="winner-title" class="winner-title"></div>
+    <div id="winner-artist" class="winner-artist"></div>
+  </div>
   <div class="card center" style="width:100%">
     <p id="winner-owner" style="font-size:1.1rem; color:var(--text)"></p>
     <p id="winner-points" class="muted" style="margin-top:4px; font-size:0.9rem"></p>
@@ -968,9 +1103,10 @@ const state = {
   scores: {},
 
   songBattle: {
-    songs: [],             // { id, player, url }
+    songs: [],             // { id, player, title, artist, coverUrl, coverTried }
     currentSetupPlayer: 0,
     playerDone: {},        // { 'Gulli': true, ... }
+    playerStatus: {},      // { 'Gulli': 'idle'|'ocr'|'done'|'error' }
     bracket: [],           // current round pairs: [ [songA, songB], ... ]
     bracketWinners: [],    // winners of this round
     matchIndex: 0,
@@ -1045,6 +1181,191 @@ function showToast(msg) {
 }
 
 // ================================================
+// 5b. SONG OCR & COVER-FETCH (Tesseract + iTunes)
+// ================================================
+
+// --- Tesseract.js lazy laden (nur beim ersten Screenshot) ---
+let _tesseractPromise = null;
+function loadTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (_tesseractPromise) return _tesseractPromise;
+  _tesseractPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload  = () => resolve(window.Tesseract);
+    s.onerror = () => { _tesseractPromise = null; reject(new Error('Tesseract konnte nicht geladen werden — Internet nötig beim ersten Mal.')); };
+    document.head.appendChild(s);
+  });
+  return _tesseractPromise;
+}
+
+// --- Bild für OCR aufbereiten: hochskalieren + dunkles UI invertieren ---
+function preprocessForOCR(imgEl) {
+  const baseW = imgEl.naturalWidth || imgEl.width;
+  const baseH = imgEl.naturalHeight || imgEl.height;
+  const scale = baseW < 1100 ? 2 : 1.4;
+  const w = Math.round(baseW * scale);
+  const h = Math.round(baseH * scale);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(imgEl, 0, 0, w, h);
+  const img = ctx.getImageData(0, 0, w, h);
+  const px = img.data;
+
+  // Durchschnittshelligkeit (Stichprobe) → dunkler Hintergrund? dann invertieren
+  let sum = 0, n = 0;
+  for (let i = 0; i < px.length; i += 4 * 97) {
+    sum += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    n++;
+  }
+  const invert = (sum / n) < 128;
+
+  for (let i = 0; i < px.length; i += 4) {
+    let lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    if (invert) lum = 255 - lum;
+    // leichter Kontrastboost
+    lum = lum < 110 ? Math.max(0, lum - 35) : Math.min(255, lum + 35);
+    px[i] = px[i + 1] = px[i + 2] = lum;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
+// --- Hauptfunktion: Screenshot → [{title, artist}] ---
+async function ocrScreenshot(imgEl) {
+  const T = await loadTesseract();
+  const canvas = preprocessForOCR(imgEl);
+  const { data } = await T.recognize(canvas, 'eng');
+  return parseSongsFromOCR(data, canvas.width, canvas.height);
+}
+
+function collectWords(data) {
+  if (data.words && data.words.length) return data.words;
+  const words = [];
+  (data.blocks || []).forEach(b =>
+    (b.paragraphs || []).forEach(p =>
+      (p.lines || []).forEach(l =>
+        (l.words || []).forEach(w => words.push(w)))));
+  return words;
+}
+
+function cleanLineText(t) {
+  return (t || '')
+    .replace(/\b\d{1,2}:\d{2}\b/g, '')                 // Dauer 3:19
+    .replace(/vor\s+\d+\s+\w+/gi, '')                  // "vor 5 Tagen"
+    .replace(/\b\d{1,2}\.\s*\w+\.?\s*\d{4}\b/g, '')     // "28. Apr. 2026"
+    .replace(/[•·|]+/g, ' ')
+    .replace(/^\s*\d{1,3}\s+/, '')                      // führende Tracknummer
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function finalizeLine(arr) {
+  arr.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+  const y0 = Math.min(...arr.map(w => w.bbox.y0));
+  const y1 = Math.max(...arr.map(w => w.bbox.y1));
+  const text = arr.map(w => w.text).join(' ').replace(/\s+/g, ' ').trim();
+  return { text, y0, y1, yc: (y0 + y1) / 2 };
+}
+
+function clusterLines(words) {
+  if (!words.length) return [];
+  const ws = words.slice().sort((a, b) => a.bbox.y0 - b.bbox.y0);
+  const heights = ws.map(w => w.bbox.y1 - w.bbox.y0).sort((a, b) => a - b);
+  const medH = heights[Math.floor(heights.length / 2)] || 12;
+  const tol = medH * 0.7;
+  const lines = [];
+  let cur = [ws[0]], curY = ws[0].bbox.y0;
+  for (let i = 1; i < ws.length; i++) {
+    if (Math.abs(ws[i].bbox.y0 - curY) <= tol) {
+      cur.push(ws[i]);
+    } else {
+      lines.push(finalizeLine(cur));
+      cur = [ws[i]]; curY = ws[i].bbox.y0;
+    }
+  }
+  lines.push(finalizeLine(cur));
+  return lines;
+}
+
+function pairLinesIntoSongs(lines) {
+  const cleaned = lines
+    .map(l => ({ ...l, text: cleanLineText(l.text) }))
+    .filter(l => l.text.length >= 2 && /[a-zA-ZäöüÄÖÜ0-9]/.test(l.text));
+  if (!cleaned.length) return [];
+
+  // typischen Zeilenabstand bestimmen
+  const gaps = [];
+  for (let i = 1; i < cleaned.length; i++) gaps.push(cleaned[i].yc - cleaned[i - 1].yc);
+  const sg = [...gaps].sort((a, b) => a - b);
+  const medGap = sg[Math.floor(sg.length / 2)] || 1e9;
+
+  const songs = [];
+  let i = 0;
+  while (i < cleaned.length) {
+    const title = cleaned[i].text;
+    let artist = '';
+    // nächste Zeile gehört dazu (Künstler), wenn sie eng darunter steht
+    if (i + 1 < cleaned.length && (cleaned[i + 1].yc - cleaned[i].yc) <= medGap * 1.15) {
+      artist = cleaned[i + 1].text;
+      i += 2;
+    } else {
+      i += 1;
+    }
+    if (title) songs.push({ title, artist });
+  }
+  return songs;
+}
+
+function parseSongsFromOCR(data, W, H) {
+  let words = collectWords(data)
+    .filter(w => w.text && w.text.trim() && (w.confidence === undefined || w.confidence > 30));
+
+  // Geometrie fehlt → Fallback: nur Textzeilen
+  if (!words.length || !words[0].bbox) {
+    return (data.text || '').split('\n')
+      .map(cleanLineText)
+      .filter(t => t.length >= 2)
+      .map(t => ({ title: t, artist: '' }));
+  }
+
+  // obere Leiste (Suche/Header) und untere Leiste ("läuft gerade") wegschneiden
+  const topCut = H * 0.05, botCut = H * 0.90;
+  words = words.filter(w => w.bbox.y0 > topCut && w.bbox.y1 < botCut);
+
+  // Spalte "Album" finden → alles rechts davon (Album/Datum/Dauer) verwerfen
+  let albumX = W * 0.42, headerY = 0;
+  const albumHdr = words.find(w => /^album$/i.test(w.text.trim()));
+  if (albumHdr) { albumX = albumHdr.bbox.x0 - 4; headerY = albumHdr.bbox.y1; }
+  words = words.filter(w => w.bbox.y0 > headerY && w.bbox.x1 < albumX);
+
+  // Tracknummern-Spalte (reine Zahlen ganz links) entfernen
+  const numColX = W * 0.10;
+  words = words.filter(w => !(/^\d{1,3}$/.test(w.text.trim()) && w.bbox.x1 < numColX));
+  // Explicit-/Video-Badges entfernen
+  words = words.filter(w => !/^(e|explicit|musikvideo|video)$/i.test(w.text.trim()));
+
+  return pairLinesIntoSongs(clusterLines(words));
+}
+
+// --- Cover über iTunes Search API (kostenlos, kein Key); offline → kein Cover ---
+async function fetchCover(song) {
+  if (song.coverTried) return song.coverUrl || null;
+  song.coverTried = true;
+  try {
+    const term = encodeURIComponent(`${song.title} ${song.artist}`.trim());
+    const res = await fetch(`https://itunes.apple.com/search?term=${term}&entity=song&limit=1`);
+    const j = await res.json();
+    const art = j.results && j.results[0] && j.results[0].artworkUrl100;
+    if (art) song.coverUrl = art.replace('100x100bb', '400x400bb');
+  } catch (e) {
+    // offline / blockiert → nur Text
+  }
+  return song.coverUrl || null;
+}
+
+// ================================================
 // 6. HOME
 // ================================================
 function renderHomeScores() {
@@ -1064,7 +1385,8 @@ function startSongBattle() {
   state.songBattle.songs = [];
   state.songBattle.currentSetupPlayer = 0;
   state.songBattle.playerDone = {};
-  PLAYERS.forEach(p => state.songBattle.playerDone[p] = false);
+  state.songBattle.playerStatus = {};
+  PLAYERS.forEach(p => { state.songBattle.playerDone[p] = false; state.songBattle.playerStatus[p] = 'idle'; });
 
   renderSetupTabs();
   renderSetupArea();
@@ -1088,36 +1410,64 @@ function switchSetupPlayer(i) {
   renderSetupArea();
 }
 
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
 function renderSetupArea() {
   const idx    = state.songBattle.currentSetupPlayer;
   const player = PLAYERS[idx];
   const area   = document.getElementById('setup-player-area');
   const songs  = state.songBattle.songs.filter(s => s.player === player);
+  const status = state.songBattle.playerStatus[player] || 'idle';
   const total  = state.songBattle.songs.length;
 
   document.getElementById('setup-progress').textContent =
     `${total} Song${total !== 1 ? 's' : ''} insgesamt`;
 
-  const nextLabel = idx < PLAYERS.length - 1
-    ? `${PLAYERS[idx + 1]}'s Songs hinzufügen →`
-    : '✓ Alle fertig → Duplikate prüfen';
+  const lastPlayer = idx === PLAYERS.length - 1;
+  document.getElementById('setup-next-btn').textContent =
+    lastPlayer ? '✓ Alle fertig → Songs prüfen' : `Weiter zu ${PLAYERS[idx + 1]} →`;
 
-  document.getElementById('setup-next-btn').textContent = nextLabel;
+  let statusHtml = '';
+  if (status === 'ocr') {
+    statusHtml = `<div class="ocr-status"><div class="spinner"></div>
+      <div class="txt">Songs werden aus dem Screenshot gelesen…</div></div>`;
+  } else if (status === 'error') {
+    statusHtml = `<div class="ocr-status"><div style="font-size:1.4rem">⚠️</div>
+      <div class="txt">Konnte nichts lesen. Nochmal versuchen oder Songs unten manuell eintragen.</div></div>`;
+  }
+
+  const editRows = songs.map(s => `
+    <div class="song-edit-row" id="edit-${s.id}">
+      <div class="fields">
+        <input value="${escapeHtml(s.title)}"  placeholder="Titel"
+          onchange="updateSongField('${s.id}','title',this.value)">
+        <input class="artist" value="${escapeHtml(s.artist)}" placeholder="Künstler"
+          onchange="updateSongField('${s.id}','artist',this.value)">
+      </div>
+      <button class="del" onclick="removeSong('${s.id}')">✕</button>
+    </div>
+  `).join('');
 
   area.innerHTML = `
     <div class="upload-zone" onclick="triggerUpload('file-${player}')">
-      <input type="file" id="file-${player}" accept="image/*" multiple
-        onchange="handleFiles('${player}', this.files)">
+      <input type="file" id="file-${player}" accept="image/*"
+        onchange="handleScreenshot('${player}', this.files)">
       <div style="font-size:2.5rem">📸</div>
       <p style="margin-top:8px; color:var(--text); font-weight:600">
-        ${player}'s Songs hinzufügen
+        ${player}: Screenshot der Songliste
       </p>
-      <p style="font-size:0.85rem; margin-top:4px">Tippe um Fotos auszuwählen</p>
+      <p style="font-size:0.85rem; margin-top:4px">
+        ${songs.length ? 'Neuen Screenshot wählen (ersetzt aktuelle Songs)' : 'Tippe um Foto auszuwählen'}
+      </p>
     </div>
-    <div class="song-grid" id="grid-${player}">
-      ${songs.map(s => songThumbHTML(s, false)).join('')}
-    </div>
-    ${songs.length > 0 ? `<p class="muted center" style="font-size:0.85rem">${songs.length} Song${songs.length !== 1 ? 's' : ''} · Tippen zum Entfernen</p>` : ''}
+    ${statusHtml}
+    ${songs.length ? `<p class="muted" style="font-size:0.85rem; margin-top:4px">
+        ${songs.length} Song${songs.length !== 1 ? 's' : ''} erkannt · zum Korrigieren tippen
+      </p>` : ''}
+    <div class="song-edit-list">${editRows}</div>
+    ${songs.length ? `<button class="btn btn-ghost btn-sm" onclick="addManualSong('${player}')">+ Song manuell hinzufügen</button>` : ''}
   `;
 }
 
@@ -1125,29 +1475,54 @@ function triggerUpload(inputId) {
   document.getElementById(inputId).click();
 }
 
-function handleFiles(player, files) {
-  for (const file of files) {
+async function handleScreenshot(player, files) {
+  if (!files || !files.length) return;
+  const file = files[0];
+
+  // alte Songs dieses Spielers ersetzen
+  state.songBattle.songs = state.songBattle.songs.filter(s => s.player !== player);
+  state.songBattle.playerStatus[player] = 'ocr';
+  renderSetupArea();
+
+  try {
     const url = URL.createObjectURL(file);
-    state.songBattle.songs.push({
-      id: crypto.randomUUID(),
-      player,
-      url,
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+
+    const parsed = await ocrScreenshot(img);
+    URL.revokeObjectURL(url);
+
+    parsed.forEach(s => {
+      if (!s.title) return;
+      state.songBattle.songs.push({
+        id: crypto.randomUUID(),
+        player,
+        title: s.title,
+        artist: s.artist || '',
+        coverUrl: null,
+        coverTried: false,
+      });
     });
+
+    state.songBattle.playerStatus[player] = parsed.length ? 'done' : 'error';
+  } catch (e) {
+    console.error(e);
+    state.songBattle.playerStatus[player] = 'error';
+    showToast(e.message || 'OCR fehlgeschlagen');
   }
   renderSetupArea();
 }
 
-function songThumbHTML(song, markable) {
-  const markClass = markable ? `class="song-thumb" onclick="toggleMark('${song.id}')"` : '';
-  const removeClass = !markable ? `class="song-thumb" onclick="removeSong('${song.id}')"` : '';
-  const attr = markable ? markClass : removeClass;
-  return `
-    <div ${attr} id="thumb-${song.id}">
-      <img src="${song.url}" loading="lazy" alt="">
-      <div class="owner-tag">${song.player.slice(0,4)}</div>
-      <div class="remove-overlay">${markable ? '🚫' : '✕'}</div>
-    </div>
-  `;
+function updateSongField(id, field, value) {
+  const song = state.songBattle.songs.find(s => s.id === id);
+  if (song) { song[field] = value.trim(); song.coverTried = false; song.coverUrl = null; }
+}
+
+function addManualSong(player) {
+  state.songBattle.songs.push({
+    id: crypto.randomUUID(), player, title: '', artist: '', coverUrl: null, coverTried: false,
+  });
+  renderSetupArea();
 }
 
 function removeSong(id) {
@@ -1158,6 +1533,11 @@ function removeSong(id) {
 function setupNextPlayer() {
   const idx    = state.songBattle.currentSetupPlayer;
   const player = PLAYERS[idx];
+
+  if (state.songBattle.playerStatus[player] === 'ocr') {
+    showToast('Bitte warten — Songs werden noch gelesen…');
+    return;
+  }
   state.songBattle.playerDone[player] = true;
 
   if (idx < PLAYERS.length - 1) {
@@ -1165,7 +1545,12 @@ function setupNextPlayer() {
     renderSetupTabs();
     renderSetupArea();
   } else {
-    // All players done → dedupe screen
+    // alle leeren/unvollständigen Songs verwerfen
+    state.songBattle.songs = state.songBattle.songs.filter(s => s.title && s.title.trim());
+    if (state.songBattle.songs.length < 2) {
+      showToast('Mindestens 2 Songs insgesamt nötig!');
+      return;
+    }
     showDedupeScreen();
   }
 }
@@ -1174,41 +1559,62 @@ function setupNextPlayer() {
 // 8. SONG BATTLE — DEDUPE
 // ================================================
 function showDedupeScreen() {
-  renderDedupeGrid();
+  autoMarkDuplicates();
+  renderReviewList();
   showScreen('song-dedupe');
 }
 
-function renderDedupeGrid() {
-  const grid = document.getElementById('dedupe-grid');
+// exakte Doppelte (gleicher Titel+Künstler) automatisch vormarkieren
+function autoMarkDuplicates() {
+  const seen = new Set();
+  state.songBattle.songs.forEach(s => {
+    const key = (s.title + '|' + s.artist).toLowerCase().replace(/\s+/g, ' ').trim();
+    s._dupKey = key;
+    s._autoMark = seen.has(key);
+    seen.add(key);
+  });
+}
+
+function renderReviewList() {
+  const list  = document.getElementById('dedupe-list');
   const count = document.getElementById('dedupe-count');
   const deleteBtn = document.getElementById('dedupe-delete-btn');
 
   count.textContent = `${state.songBattle.songs.length} Songs`;
 
-  grid.innerHTML = state.songBattle.songs
-    .map(s => songThumbHTML(s, true))
-    .join('');
+  list.innerHTML = state.songBattle.songs.map(s => `
+    <div class="review-row ${s._autoMark ? 'marked' : ''}" id="rev-${s.id}" onclick="toggleMark('${s.id}')">
+      <div class="cover-sm">🎵</div>
+      <div class="meta">
+        <div class="t">${escapeHtml(s.title) || '<span style="color:var(--muted)">(ohne Titel)</span>'}</div>
+        <div class="a">${escapeHtml(s.artist) || '—'}</div>
+      </div>
+      <span class="owner-tag">${escapeHtml(s.player)}</span>
+      <span class="mark-x">✕</span>
+    </div>
+  `).join('');
 
-  const marked = document.querySelectorAll('.song-thumb.marked').length;
-  deleteBtn.style.display = marked > 0 ? 'flex' : 'none';
-  deleteBtn.textContent   = `🗑️ ${marked} markierte löschen`;
+  updateDeleteBtn();
 }
 
 function toggleMark(id) {
-  const el = document.getElementById('thumb-' + id);
+  const el = document.getElementById('rev-' + id);
   if (el) el.classList.toggle('marked');
+  updateDeleteBtn();
+}
 
-  const marked = document.querySelectorAll('.song-thumb.marked').length;
+function updateDeleteBtn() {
+  const marked = document.querySelectorAll('.review-row.marked').length;
   const btn = document.getElementById('dedupe-delete-btn');
   btn.style.display = marked > 0 ? 'flex' : 'none';
   btn.textContent   = `🗑️ ${marked} markierte löschen`;
 }
 
 function deleteMarked() {
-  const markedIds = [...document.querySelectorAll('.song-thumb.marked')]
-    .map(el => el.id.replace('thumb-', ''));
+  const markedIds = [...document.querySelectorAll('.review-row.marked')]
+    .map(el => el.id.replace('rev-', ''));
   state.songBattle.songs = state.songBattle.songs.filter(s => !markedIds.includes(s.id));
-  renderDedupeGrid();
+  renderReviewList();
   showToast(`${markedIds.length} Song${markedIds.length !== 1 ? 's' : ''} gelöscht`);
 }
 
@@ -1263,16 +1669,39 @@ function showBattleScreen() {
   const [songA, songB] = bracket[matchIndex];
 
   document.getElementById('battle-round-label').textContent =
-    `Runde ${roundNumber}`;
+    roundNumber > 1 && bracket.length === 1 ? '🔥 Finale' : `Runde ${roundNumber}`;
   document.getElementById('battle-match-label').textContent =
     `Match ${matchIndex + 1} von ${total}`;
 
-  document.getElementById('battle-img-left').src   = songA.url;
-  document.getElementById('battle-name-left').textContent = songA.player + "'s Song";
-  document.getElementById('battle-img-right').src  = songB.url;
-  document.getElementById('battle-name-right').textContent = songB.player + "'s Song";
+  renderBattleSide('left', songA);
+  renderBattleSide('right', songB);
 
   showScreen('song-battle');
+}
+
+function renderBattleSide(side, song) {
+  document.getElementById(`battle-title-${side}`).textContent  = song.title || '(ohne Titel)';
+  document.getElementById(`battle-artist-${side}`).textContent = song.artist || '';
+  document.getElementById(`battle-owner-${side}`).textContent  = song.player;
+
+  const coverEl = document.getElementById(`battle-cover-${side}`);
+  setCover(coverEl, song);
+}
+
+// Cover anzeigen (online) bzw. Platzhalter (offline / nicht gefunden)
+function setCover(el, song) {
+  if (song.coverUrl) {
+    el.classList.remove('placeholder');
+    el.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
+    return;
+  }
+  el.classList.add('placeholder');
+  el.innerHTML = '🎵';
+  if (!song.coverTried) {
+    fetchCover(song).then(url => {
+      if (url) setCover(el, song); // nur aktualisieren wenn noch passend
+    });
+  }
 }
 
 function pickWinner(side) {
@@ -1314,11 +1743,22 @@ function advanceRound() {
 }
 
 function showWinnerScreen(song) {
-  document.getElementById('winner-img').src = song.url;
-  document.getElementById('winner-owner').textContent =
+  document.getElementById('winner-title').textContent  = song.title || '(ohne Titel)';
+  document.getElementById('winner-artist').textContent = song.artist || '';
+  document.getElementById('winner-owner').textContent  =
     `🎤 ${song.player}'s Song hat gewonnen!`;
   document.getElementById('winner-points').textContent =
     `+3 Punkte für ${song.player}`;
+
+  const wimg = document.getElementById('winner-img');
+  if (song.coverUrl) {
+    wimg.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
+  } else {
+    wimg.innerHTML = '🎵';
+    fetchCover(song).then(url => {
+      if (url) wimg.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
+    });
+  }
 
   addPoint(song.player, 3);
   showScreen('song-winner');
@@ -1414,18 +1854,31 @@ function kmStartTracking() {
       dot.className   = 'gps-dot';
       label.textContent = 'GPS aktiv';
 
+      const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      const acc = pos.coords.accuracy || 0; // Genauigkeit in Metern
+
       if (!state.kmGame.startPos) {
-        state.kmGame.startPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        // Erster Fixpunkt
+        state.kmGame.startPos = cur;
+        state.kmGame.lastPos  = cur;
         state.kmGame.distanceTraveled = 0;
       } else {
-        const d = haversine(
-          state.kmGame.startPos.lat, state.kmGame.startPos.lon,
-          pos.coords.latitude,       pos.coords.longitude
+        // Strecke zwischen letztem und aktuellem Punkt aufaddieren (kumulativ)
+        const segKm = haversine(
+          state.kmGame.lastPos.lat, state.kmGame.lastPos.lon,
+          cur.lat,                  cur.lon
         );
-        state.kmGame.distanceTraveled = d;
+        const segMeters = segKm * 1000;
+
+        // GPS-Jitter filtern: nur zählen wenn die Bewegung größer ist als
+        // die Messungenauigkeit (mind. 5 m) — sonst "wandert" die Strecke im Stand
+        const minMove = Math.max(5, acc);
+        if (segMeters >= minMove) {
+          state.kmGame.distanceTraveled += segKm;
+          state.kmGame.lastPos = cur; // Bezugspunkt nur bei echter Bewegung verschieben
+        }
       }
 
-      state.kmGame.lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
       document.getElementById('km-distance').textContent =
         state.kmGame.distanceTraveled.toFixed(2);
       updateGuessesLive();
