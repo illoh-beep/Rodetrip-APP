@@ -1605,9 +1605,27 @@ async function loadPlaylist(player) {
     }
   } catch (e) {
     console.error(e);
+    let errMsg = e.message || 'Laden fehlgeschlagen';
+    if (errMsg.includes('403')) {
+      // Diagnose: Playlist-Info separat abrufen um public-Status zu prüfen
+      try {
+        const info = await _spotifyGet(
+          'https://api.spotify.com/v1/playlists/' + id + '?fields=public,name', false
+        );
+        if (info.public === false) {
+          errMsg = `Spotify bestätigt: Playlist "${info.name || id}" ist auf PRIVAT gestellt → in Spotify die Playlist öffnen → ··· → "Öffentlich machen" aktivieren.`;
+        } else if (info.public === true) {
+          errMsg = `Playlist ist lt. Spotify öffentlich, aber der Tracks-Abruf schlägt fehl. Bitte "↩ Neu anmelden" tippen und nochmal versuchen.`;
+        } else {
+          errMsg = `Playlist-Status unklar (public=${info.public}). Bitte "↩ Neu anmelden" und erneut versuchen.`;
+        }
+      } catch (e2) {
+        errMsg = `Kein Zugriff (403). Playlist komplett privat oder du hast keine Berechtigung → in Spotify → ··· → "Öffentlich machen".`;
+      }
+    }
     state.songBattle.playerStatus[player] = 'error';
-    state.songBattle.playerError[player] = e.message || 'Laden fehlgeschlagen';
-    showToast(e.message || 'Laden fehlgeschlagen');
+    state.songBattle.playerError[player] = errMsg;
+    showToast('Laden fehlgeschlagen');
   }
   renderSetupArea();
 }
