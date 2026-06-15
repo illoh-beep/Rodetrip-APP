@@ -1389,16 +1389,10 @@ async function _spotifyGet(url, allowRetry) {
 
 // --- Alle Tracks einer Playlist holen (paginiert) ---
 async function fetchPlaylistTracks(playlistId) {
-  const info = await _spotifyGet(
-    'https://api.spotify.com/v1/playlists/' + playlistId + '?fields=public,name', true
-  );
-  if (info.public === false) {
-    throw new Error('Playlist "' + (info.name || playlistId) + '" ist privat – bitte in Spotify → Playlist-Einstellungen auf "Öffentlich" stellen.');
-  }
   let url = 'https://api.spotify.com/v1/playlists/' + playlistId +
     '/tracks?limit=100';
   const out = [];
-  let first = false;
+  let first = true;
   while (url) {
     const data = await _spotifyGet(url, first);
     first = false;
