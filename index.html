@@ -1122,6 +1122,7 @@ const state = {
     playerDone: {},        // { 'Gulli': true, ... }
     playerStatus: {},      // { 'Gulli': 'idle'|'loading'|'done'|'error' }
     playerLink: {},        // { 'Gulli': '<playlist-url>' }
+    playerError: {},       // { 'Gulli': 'Spotify 403: ...' }
     bracket: [],           // current round pairs: [ [songA, songB], ... ]
     bracketWinners: [],    // winners of this round
     matchIndex: 0,
@@ -1232,6 +1233,7 @@ async function spotifyLogin() {
     redirect_uri: spotifyRedirectUri(),
     code_challenge_method: 'S256',
     code_challenge: challenge,
+    scope: 'playlist-read-private playlist-read-collaborative',
   });
   location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
 }
@@ -1262,21 +1264,32 @@ async function handleSpotifyRedirect() {
   } catch (e) { console.error(e); }
 }
 
+// Erhöhen, wenn sich die Scopes ändern → erzwingt einmaligen Neu-Login
+const SPOTIFY_SCOPE_VERSION = 2;
+
 function _storeToken(data) {
   const prev = JSON.parse(localStorage.getItem('sp_token') || '{}');
   localStorage.setItem('sp_token', JSON.stringify({
     access_token: data.access_token,
     refresh_token: data.refresh_token || prev.refresh_token || null,
     expires_at: Date.now() + (data.expires_in * 1000) - 60000,
+    scope_v: SPOTIFY_SCOPE_VERSION,
   }));
 }
 
+function _loadToken() {
+  const tok = JSON.parse(localStorage.getItem('sp_token') || 'null');
+  if (!tok) return null;
+  if (tok.scope_v !== SPOTIFY_SCOPE_VERSION) { localStorage.removeItem('sp_token'); return null; }
+  return tok;
+}
+
 function isSpotifyAuthed() {
-  return !!JSON.parse(localStorage.getItem('sp_token') || 'null');
+  return !!_loadToken();
 }
 
 async function getSpotifyToken() {
-  const tok = JSON.parse(localStorage.getItem('sp_token') || 'null');
+  const tok = _loadToken();
   if (!tok) return null;
   if (Date.now() < tok.expires_at) return tok.access_token;
   if (!tok.refresh_token) { localStorage.removeItem('sp_token'); return null; }
@@ -1311,19 +1324,53 @@ function parsePlaylistId(input) {
   return null;
 }
 
-// --- Alle Tracks einer oeffentlichen Playlist holen (paginiert) ---
-async function fetchPlaylistTracks(playlistId) {
+// --- Genaue Spotify-Fehlermeldung aus der Antwort lesen ---
+async function _spotifyError(res) {
+  let detail = '';
+  try {
+    const body = await res.json();
+    if (body && body.error && body.error.message) detail = body.error.message;
+  } catch (e) {
+    try { detail = await res.text(); } catch (e2) {}
+  }
+  return `Spotify ${res.status}${detail ? ': ' + detail : ''}`;
+}
+
+// --- Eine Seite holen; bei 401 einmal Token erneuern und erneut versuchen ---
+async function _spotifyGet(url, allowRetry) {
   const token = await getSpotifyToken();
   if (!token) throw new Error('Bitte zuerst mit Spotify anmelden');
+  let res;
+  try {
+    res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  } catch (e) {
+    throw new Error('Keine Verbindung zu Spotify (Internet?)');
+  }
+  if (res.status === 401 && allowRetry) {
+    // gespeicherten Token als abgelaufen markieren → getSpotifyToken refresht ihn
+    const tok = JSON.parse(localStorage.getItem('sp_token') || 'null');
+    if (tok && tok.refresh_token) {
+      tok.expires_at = 0;
+      localStorage.setItem('sp_token', JSON.stringify(tok));
+      const fresh = await getSpotifyToken();
+      if (fresh) res = await fetch(url, { headers: { Authorization: 'Bearer ' + fresh } });
+    }
+  }
+  if (res.status === 401) { spotifyLogout(); throw new Error('Login abgelaufen - bitte neu anmelden'); }
+  if (res.status === 404) throw new Error('Playlist nicht gefunden - ist sie wirklich oeffentlich?');
+  if (!res.ok) throw new Error(await _spotifyError(res));
+  return res.json();
+}
+
+// --- Alle Tracks einer Playlist holen (paginiert) ---
+async function fetchPlaylistTracks(playlistId) {
   let url = 'https://api.spotify.com/v1/playlists/' + playlistId +
-    '/tracks?fields=items(track(name,artists(name),album(images),id)),next&limit=100';
+    '/tracks?limit=100';
   const out = [];
+  let first = true;
   while (url) {
-    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-    if (res.status === 401) { spotifyLogout(); throw new Error('Login abgelaufen - bitte neu anmelden'); }
-    if (res.status === 404) throw new Error('Playlist nicht gefunden - ist sie oeffentlich?');
-    if (!res.ok) throw new Error('Spotify-Fehler ' + res.status);
-    const data = await res.json();
+    const data = await _spotifyGet(url, first);
+    first = false;
     (data.items || []).forEach(it => {
       const t = it.track;
       if (!t || !t.name) return;
@@ -1363,7 +1410,8 @@ function startSongBattle() {
   state.songBattle.playerDone = {};
   state.songBattle.playerStatus = {};
   state.songBattle.playerLink = {};
-  PLAYERS.forEach(p => { state.songBattle.playerDone[p] = false; state.songBattle.playerStatus[p] = 'idle'; state.songBattle.playerLink[p] = ''; });
+  state.songBattle.playerError = {};
+  PLAYERS.forEach(p => { state.songBattle.playerDone[p] = false; state.songBattle.playerStatus[p] = 'idle'; state.songBattle.playerLink[p] = ''; state.songBattle.playerError[p] = ''; });
 
   renderSetupTabs();
   renderSetupArea();
@@ -1423,8 +1471,10 @@ function renderSetupArea() {
     statusHtml = `<div class="ocr-status"><div class="spinner"></div>
       <div class="txt">Songs werden von Spotify geladen…</div></div>`;
   } else if (status === 'error') {
+    const errMsg = state.songBattle.playerError[player] || 'Unbekannter Fehler';
     statusHtml = `<div class="ocr-status"><div style="font-size:1.4rem">⚠️</div>
-      <div class="txt">Konnte die Playlist nicht laden. Link prüfen (öffentlich?) und nochmal versuchen.</div></div>`;
+      <div class="txt">Konnte die Playlist nicht laden.<br>
+      <span style="color:var(--danger); font-size:0.85rem; word-break:break-word">${escapeHtml(errMsg)}</span></div></div>`;
   }
 
   const editRows = songs.map(s => `
@@ -1472,6 +1522,7 @@ async function loadPlaylist(player) {
   // alte Songs dieses Spielers ersetzen
   state.songBattle.songs = state.songBattle.songs.filter(s => s.player !== player);
   state.songBattle.playerStatus[player] = 'loading';
+  state.songBattle.playerError[player] = '';
   renderSetupArea();
 
   try {
@@ -1487,12 +1538,17 @@ async function loadPlaylist(player) {
         spotifyId: t.spotifyId,
       });
     });
-    state.songBattle.playerStatus[player] = tracks.length ? 'done' : 'error';
-    if (!tracks.length) showToast('Keine Songs in der Playlist gefunden');
-    else showToast(`${tracks.length} Songs geladen`);
+    if (tracks.length) {
+      state.songBattle.playerStatus[player] = 'done';
+      showToast(`${tracks.length} Songs geladen`);
+    } else {
+      state.songBattle.playerStatus[player] = 'error';
+      state.songBattle.playerError[player] = 'Playlist ist leer oder enthält keine abspielbaren Songs.';
+    }
   } catch (e) {
     console.error(e);
     state.songBattle.playerStatus[player] = 'error';
+    state.songBattle.playerError[player] = e.message || 'Laden fehlgeschlagen';
     showToast(e.message || 'Laden fehlgeschlagen');
   }
   renderSetupArea();
