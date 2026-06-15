@@ -1266,7 +1266,7 @@ async function handleSpotifyRedirect() {
 }
 
 // Erhöhen, wenn sich die Scopes ändern → erzwingt einmaligen Neu-Login
-const SPOTIFY_SCOPE_VERSION = 2;
+const SPOTIFY_SCOPE_VERSION = 3;
 
 function _storeToken(data) {
   const prev = JSON.parse(localStorage.getItem('sp_token') || '{}');
@@ -1523,9 +1523,13 @@ function renderSetupArea() {
       <div class="txt">Songs werden von Spotify geladen…</div></div>`;
   } else if (status === 'error') {
     const errMsg = state.songBattle.playerError[player] || 'Unbekannter Fehler';
+    const reloginBtn = errMsg.includes('403')
+      ? `<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="spotifyLogout();renderSetupArea()">↩ Neu anmelden</button>`
+      : '';
     statusHtml = `<div class="ocr-status"><div style="font-size:1.4rem">⚠️</div>
       <div class="txt">Konnte die Playlist nicht laden.<br>
-      <span style="color:var(--danger); font-size:0.85rem; word-break:break-word">${escapeHtml(errMsg)}</span></div></div>`;
+      <span style="color:var(--danger); font-size:0.85rem; word-break:break-word">${escapeHtml(errMsg)}</span>
+      ${reloginBtn}</div></div>`;
   }
 
   const editRows = songs.map(s => `
