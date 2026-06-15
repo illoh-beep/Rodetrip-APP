@@ -1320,7 +1320,7 @@ function parsePlaylistId(input) {
   input = (input || '').trim();
   const m = input.match(/playlist[/:]([A-Za-z0-9]+)/);
   if (m) return m[1];
-  if (/^[A-Za-z0-9]{20,}$/.test(input)) return input;
+  if (/^[A-Za-z0-9]{20,30}$/.test(input)) return input;
   return null;
 }
 
@@ -1357,7 +1357,13 @@ async function _spotifyGet(url, allowRetry) {
     }
   }
   if (res.status === 401) { spotifyLogout(); throw new Error('Login abgelaufen - bitte neu anmelden'); }
-  if (res.status === 404) throw new Error('Playlist nicht gefunden - ist sie wirklich oeffentlich?');
+  if (res.status === 403) throw new Error('Zugriff verweigert (403) – Stelle sicher, dass dein Spotify-Konto im Developer Dashboard freigeschaltet ist: developer.spotify.com → App → User Management');
+  if (res.status === 404) throw new Error('Playlist nicht gefunden – ist sie wirklich öffentlich?');
+  if (res.status === 429) {
+    const wait = parseInt(res.headers.get('Retry-After') || '5', 10);
+    await new Promise(r => setTimeout(r, wait * 1000));
+    return _spotifyGet(url, false);
+  }
   if (!res.ok) throw new Error(await _spotifyError(res));
   return res.json();
 }
