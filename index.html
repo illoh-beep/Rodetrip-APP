@@ -496,6 +496,20 @@
       background: var(--card2);
       font-size: 1rem;
     }
+    .pl-input {
+      background: var(--card2);
+      border: 2px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      min-height: 50px;
+      width: 100%;
+      touch-action: manipulation;
+    }
+    .pl-input:focus { border-color: var(--accent); }
 
     /* Review/dedupe text rows */
     .review-row {
@@ -869,7 +883,7 @@
     <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
     <div>
       <h2>🎵 Song Battle</h2>
-      <p style="font-size:0.85rem">Jeder lädt 1 Screenshot seiner Songliste hoch</p>
+      <p style="font-size:0.85rem">Jeder fügt seinen öffentlichen Playlist-Link ein</p>
     </div>
   </div>
 
@@ -1106,7 +1120,8 @@ const state = {
     songs: [],             // { id, player, title, artist, coverUrl, coverTried }
     currentSetupPlayer: 0,
     playerDone: {},        // { 'Gulli': true, ... }
-    playerStatus: {},      // { 'Gulli': 'idle'|'ocr'|'done'|'error' }
+    playerStatus: {},      // { 'Gulli': 'idle'|'loading'|'done'|'error' }
+    playerLink: {},        // { 'Gulli': '<playlist-url>' }
     bracket: [],           // current round pairs: [ [songA, songB], ... ]
     bracketWinners: [],    // winners of this round
     matchIndex: 0,
@@ -1181,188 +1196,149 @@ function showToast(msg) {
 }
 
 // ================================================
-// 5b. SONG OCR & COVER-FETCH (Tesseract + iTunes)
+// 5b. SPOTIFY-INTEGRATION (PKCE-Login + Playlists)
 // ================================================
+const SPOTIFY_CLIENT_ID = '01154e8461b5413193b17043685672f4';
 
-// --- Tesseract.js lazy laden (nur beim ersten Screenshot) ---
-let _tesseractPromise = null;
-function loadTesseract() {
-  if (window.Tesseract) return Promise.resolve(window.Tesseract);
-  if (_tesseractPromise) return _tesseractPromise;
-  _tesseractPromise = new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-    s.onload  = () => resolve(window.Tesseract);
-    s.onerror = () => { _tesseractPromise = null; reject(new Error('Tesseract konnte nicht geladen werden — Internet nötig beim ersten Mal.')); };
-    document.head.appendChild(s);
+function spotifyRedirectUri() {
+  return location.origin + location.pathname.replace(/index\.html$/, '');
+}
+
+// --- PKCE-Hilfsfunktionen ---
+function _b64url(bytes) {
+  const s = btoa(String.fromCharCode.apply(null, bytes));
+  return s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function _genVerifier() {
+  const arr = new Uint8Array(64);
+  crypto.getRandomValues(arr);
+  return _b64url(arr).slice(0, 120);
+}
+async function _challenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return _b64url(new Uint8Array(hash));
+}
+
+// --- Login starten (leitet zu Spotify weiter) ---
+async function spotifyLogin() {
+  const verifier = _genVerifier();
+  sessionStorage.setItem('sp_verifier', verifier);
+  sessionStorage.setItem('sp_return', '1');
+  const challenge = await _challenge(verifier);
+  const params = new URLSearchParams({
+    client_id: SPOTIFY_CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: spotifyRedirectUri(),
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
   });
-  return _tesseractPromise;
+  location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
 }
 
-// --- Bild für OCR aufbereiten: hochskalieren + dunkles UI invertieren ---
-function preprocessForOCR(imgEl) {
-  const baseW = imgEl.naturalWidth || imgEl.width;
-  const baseH = imgEl.naturalHeight || imgEl.height;
-  const scale = baseW < 1100 ? 2 : 1.4;
-  const w = Math.round(baseW * scale);
-  const h = Math.round(baseH * scale);
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  const ctx = c.getContext('2d');
-  ctx.drawImage(imgEl, 0, 0, w, h);
-  const img = ctx.getImageData(0, 0, w, h);
-  const px = img.data;
-
-  // Durchschnittshelligkeit (Stichprobe) → dunkler Hintergrund? dann invertieren
-  let sum = 0, n = 0;
-  for (let i = 0; i < px.length; i += 4 * 97) {
-    sum += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-    n++;
-  }
-  const invert = (sum / n) < 128;
-
-  for (let i = 0; i < px.length; i += 4) {
-    let lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-    if (invert) lum = 255 - lum;
-    // leichter Kontrastboost
-    lum = lum < 110 ? Math.max(0, lum - 35) : Math.min(255, lum + 35);
-    px[i] = px[i + 1] = px[i + 2] = lum;
-  }
-  ctx.putImageData(img, 0, 0);
-  return c;
-}
-
-// --- Hauptfunktion: Screenshot → [{title, artist}] ---
-async function ocrScreenshot(imgEl) {
-  const T = await loadTesseract();
-  const canvas = preprocessForOCR(imgEl);
-  const { data } = await T.recognize(canvas, 'eng');
-  return parseSongsFromOCR(data, canvas.width, canvas.height);
-}
-
-function collectWords(data) {
-  if (data.words && data.words.length) return data.words;
-  const words = [];
-  (data.blocks || []).forEach(b =>
-    (b.paragraphs || []).forEach(p =>
-      (p.lines || []).forEach(l =>
-        (l.words || []).forEach(w => words.push(w)))));
-  return words;
-}
-
-function cleanLineText(t) {
-  return (t || '')
-    .replace(/\b\d{1,2}:\d{2}\b/g, '')                 // Dauer 3:19
-    .replace(/vor\s+\d+\s+\w+/gi, '')                  // "vor 5 Tagen"
-    .replace(/\b\d{1,2}\.\s*\w+\.?\s*\d{4}\b/g, '')     // "28. Apr. 2026"
-    .replace(/[•·|]+/g, ' ')
-    .replace(/^\s*\d{1,3}\s+/, '')                      // führende Tracknummer
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function finalizeLine(arr) {
-  arr.sort((a, b) => a.bbox.x0 - b.bbox.x0);
-  const y0 = Math.min(...arr.map(w => w.bbox.y0));
-  const y1 = Math.max(...arr.map(w => w.bbox.y1));
-  const text = arr.map(w => w.text).join(' ').replace(/\s+/g, ' ').trim();
-  return { text, y0, y1, yc: (y0 + y1) / 2 };
-}
-
-function clusterLines(words) {
-  if (!words.length) return [];
-  const ws = words.slice().sort((a, b) => a.bbox.y0 - b.bbox.y0);
-  const heights = ws.map(w => w.bbox.y1 - w.bbox.y0).sort((a, b) => a - b);
-  const medH = heights[Math.floor(heights.length / 2)] || 12;
-  const tol = medH * 0.7;
-  const lines = [];
-  let cur = [ws[0]], curY = ws[0].bbox.y0;
-  for (let i = 1; i < ws.length; i++) {
-    if (Math.abs(ws[i].bbox.y0 - curY) <= tol) {
-      cur.push(ws[i]);
-    } else {
-      lines.push(finalizeLine(cur));
-      cur = [ws[i]]; curY = ws[i].bbox.y0;
-    }
-  }
-  lines.push(finalizeLine(cur));
-  return lines;
-}
-
-function pairLinesIntoSongs(lines) {
-  const cleaned = lines
-    .map(l => ({ ...l, text: cleanLineText(l.text) }))
-    .filter(l => l.text.length >= 2 && /[a-zA-ZäöüÄÖÜ0-9]/.test(l.text));
-  if (!cleaned.length) return [];
-
-  // typischen Zeilenabstand bestimmen
-  const gaps = [];
-  for (let i = 1; i < cleaned.length; i++) gaps.push(cleaned[i].yc - cleaned[i - 1].yc);
-  const sg = [...gaps].sort((a, b) => a - b);
-  const medGap = sg[Math.floor(sg.length / 2)] || 1e9;
-
-  const songs = [];
-  let i = 0;
-  while (i < cleaned.length) {
-    const title = cleaned[i].text;
-    let artist = '';
-    // nächste Zeile gehört dazu (Künstler), wenn sie eng darunter steht
-    if (i + 1 < cleaned.length && (cleaned[i + 1].yc - cleaned[i].yc) <= medGap * 1.15) {
-      artist = cleaned[i + 1].text;
-      i += 2;
-    } else {
-      i += 1;
-    }
-    if (title) songs.push({ title, artist });
-  }
-  return songs;
-}
-
-function parseSongsFromOCR(data, W, H) {
-  let words = collectWords(data)
-    .filter(w => w.text && w.text.trim() && (w.confidence === undefined || w.confidence > 30));
-
-  // Geometrie fehlt → Fallback: nur Textzeilen
-  if (!words.length || !words[0].bbox) {
-    return (data.text || '').split('\n')
-      .map(cleanLineText)
-      .filter(t => t.length >= 2)
-      .map(t => ({ title: t, artist: '' }));
-  }
-
-  // obere Leiste (Suche/Header) und untere Leiste ("läuft gerade") wegschneiden
-  const topCut = H * 0.05, botCut = H * 0.90;
-  words = words.filter(w => w.bbox.y0 > topCut && w.bbox.y1 < botCut);
-
-  // Spalte "Album" finden → alles rechts davon (Album/Datum/Dauer) verwerfen
-  let albumX = W * 0.42, headerY = 0;
-  const albumHdr = words.find(w => /^album$/i.test(w.text.trim()));
-  if (albumHdr) { albumX = albumHdr.bbox.x0 - 4; headerY = albumHdr.bbox.y1; }
-  words = words.filter(w => w.bbox.y0 > headerY && w.bbox.x1 < albumX);
-
-  // Tracknummern-Spalte (reine Zahlen ganz links) entfernen
-  const numColX = W * 0.10;
-  words = words.filter(w => !(/^\d{1,3}$/.test(w.text.trim()) && w.bbox.x1 < numColX));
-  // Explicit-/Video-Badges entfernen
-  words = words.filter(w => !/^(e|explicit|musikvideo|video)$/i.test(w.text.trim()));
-
-  return pairLinesIntoSongs(clusterLines(words));
-}
-
-// --- Cover über iTunes Search API (kostenlos, kein Key); offline → kein Cover ---
-async function fetchCover(song) {
-  if (song.coverTried) return song.coverUrl || null;
-  song.coverTried = true;
+// --- Ruecksprung von Spotify verarbeiten (beim Laden der Seite) ---
+async function handleSpotifyRedirect() {
+  const sp = new URLSearchParams(location.search);
+  const code = sp.get('code');
+  if (!code) return;
+  const verifier = sessionStorage.getItem('sp_verifier');
+  history.replaceState({}, '', spotifyRedirectUri());
+  if (!verifier) return;
   try {
-    const term = encodeURIComponent(`${song.title} ${song.artist}`.trim());
-    const res = await fetch(`https://itunes.apple.com/search?term=${term}&entity=song&limit=1`);
-    const j = await res.json();
-    const art = j.results && j.results[0] && j.results[0].artworkUrl100;
-    if (art) song.coverUrl = art.replace('100x100bb', '400x400bb');
-  } catch (e) {
-    // offline / blockiert → nur Text
+    const body = new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: spotifyRedirectUri(),
+      code_verifier: verifier,
+    });
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body,
+    });
+    const data = await res.json();
+    if (data.access_token) _storeToken(data);
+  } catch (e) { console.error(e); }
+}
+
+function _storeToken(data) {
+  const prev = JSON.parse(localStorage.getItem('sp_token') || '{}');
+  localStorage.setItem('sp_token', JSON.stringify({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token || prev.refresh_token || null,
+    expires_at: Date.now() + (data.expires_in * 1000) - 60000,
+  }));
+}
+
+function isSpotifyAuthed() {
+  return !!JSON.parse(localStorage.getItem('sp_token') || 'null');
+}
+
+async function getSpotifyToken() {
+  const tok = JSON.parse(localStorage.getItem('sp_token') || 'null');
+  if (!tok) return null;
+  if (Date.now() < tok.expires_at) return tok.access_token;
+  if (!tok.refresh_token) { localStorage.removeItem('sp_token'); return null; }
+  try {
+    const body = new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      grant_type: 'refresh_token',
+      refresh_token: tok.refresh_token,
+    });
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body,
+    });
+    const data = await res.json();
+    if (data.access_token) { _storeToken(data); return data.access_token; }
+  } catch (e) { console.error(e); }
+  localStorage.removeItem('sp_token');
+  return null;
+}
+
+function spotifyLogout() {
+  localStorage.removeItem('sp_token');
+}
+
+// --- Playlist-ID aus Link / URI extrahieren ---
+function parsePlaylistId(input) {
+  input = (input || '').trim();
+  const m = input.match(/playlist[/:]([A-Za-z0-9]+)/);
+  if (m) return m[1];
+  if (/^[A-Za-z0-9]{20,}$/.test(input)) return input;
+  return null;
+}
+
+// --- Alle Tracks einer oeffentlichen Playlist holen (paginiert) ---
+async function fetchPlaylistTracks(playlistId) {
+  const token = await getSpotifyToken();
+  if (!token) throw new Error('Bitte zuerst mit Spotify anmelden');
+  let url = 'https://api.spotify.com/v1/playlists/' + playlistId +
+    '/tracks?fields=items(track(name,artists(name),album(images),id)),next&limit=100';
+  const out = [];
+  while (url) {
+    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    if (res.status === 401) { spotifyLogout(); throw new Error('Login abgelaufen - bitte neu anmelden'); }
+    if (res.status === 404) throw new Error('Playlist nicht gefunden - ist sie oeffentlich?');
+    if (!res.ok) throw new Error('Spotify-Fehler ' + res.status);
+    const data = await res.json();
+    (data.items || []).forEach(it => {
+      const t = it.track;
+      if (!t || !t.name) return;
+      const imgs = (t.album && t.album.images) || [];
+      const cover = imgs[1] ? imgs[1].url : (imgs[0] ? imgs[0].url : null);
+      out.push({
+        title: t.name,
+        artist: (t.artists || []).map(a => a.name).join(', '),
+        coverUrl: cover,
+        spotifyId: t.id,
+      });
+    });
+    url = data.next;
   }
-  return song.coverUrl || null;
+  return out;
 }
 
 // ================================================
@@ -1386,7 +1362,8 @@ function startSongBattle() {
   state.songBattle.currentSetupPlayer = 0;
   state.songBattle.playerDone = {};
   state.songBattle.playerStatus = {};
-  PLAYERS.forEach(p => { state.songBattle.playerDone[p] = false; state.songBattle.playerStatus[p] = 'idle'; });
+  state.songBattle.playerLink = {};
+  PLAYERS.forEach(p => { state.songBattle.playerDone[p] = false; state.songBattle.playerStatus[p] = 'idle'; state.songBattle.playerLink[p] = ''; });
 
   renderSetupTabs();
   renderSetupArea();
@@ -1429,17 +1406,30 @@ function renderSetupArea() {
   document.getElementById('setup-next-btn').textContent =
     lastPlayer ? '✓ Alle fertig → Songs prüfen' : `Weiter zu ${PLAYERS[idx + 1]} →`;
 
+  // Nicht eingeloggt → Spotify-Login-Gate
+  if (!isSpotifyAuthed()) {
+    area.innerHTML = `
+      <div class="card center" style="gap:12px; display:flex; flex-direction:column; align-items:center; margin-top:20px">
+        <div style="font-size:3rem">🎧</div>
+        <h3>Mit Spotify anmelden</h3>
+        <p style="font-size:0.9rem">Einmalig nötig, damit die App eure<br>öffentlichen Playlists laden kann.</p>
+        <button class="btn btn-primary" style="background:#1DB954" onclick="spotifyLogin()">Mit Spotify anmelden</button>
+      </div>`;
+    return;
+  }
+
   let statusHtml = '';
-  if (status === 'ocr') {
+  if (status === 'loading') {
     statusHtml = `<div class="ocr-status"><div class="spinner"></div>
-      <div class="txt">Songs werden aus dem Screenshot gelesen…</div></div>`;
+      <div class="txt">Songs werden von Spotify geladen…</div></div>`;
   } else if (status === 'error') {
     statusHtml = `<div class="ocr-status"><div style="font-size:1.4rem">⚠️</div>
-      <div class="txt">Konnte nichts lesen. Nochmal versuchen oder Songs unten manuell eintragen.</div></div>`;
+      <div class="txt">Konnte die Playlist nicht laden. Link prüfen (öffentlich?) und nochmal versuchen.</div></div>`;
   }
 
   const editRows = songs.map(s => `
     <div class="song-edit-row" id="edit-${s.id}">
+      <div class="cover-sm">${s.coverUrl ? `<img src="${s.coverUrl}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '🎵'}</div>
       <div class="fields">
         <input value="${escapeHtml(s.title)}"  placeholder="Titel"
           onchange="updateSongField('${s.id}','title',this.value)">
@@ -1450,77 +1440,72 @@ function renderSetupArea() {
     </div>
   `).join('');
 
+  const link = escapeHtml(state.songBattle.playerLink[player] || '');
   area.innerHTML = `
-    <div class="upload-zone" onclick="triggerUpload('file-${player}')">
-      <input type="file" id="file-${player}" accept="image/*"
-        onchange="handleScreenshot('${player}', this.files)">
-      <div style="font-size:2.5rem">📸</div>
-      <p style="margin-top:8px; color:var(--text); font-weight:600">
-        ${player}: Screenshot der Songliste
+    <div class="card" style="display:flex; flex-direction:column; gap:10px">
+      <p style="color:var(--text); font-weight:600; font-size:0.95rem">
+        🎵 ${player}: öffentlichen Playlist-Link einfügen
       </p>
-      <p style="font-size:0.85rem; margin-top:4px">
-        ${songs.length ? 'Neuen Screenshot wählen (ersetzt aktuelle Songs)' : 'Tippe um Foto auszuwählen'}
-      </p>
+      <input id="pl-input-${player}" class="pl-input" inputmode="url"
+        placeholder="https://open.spotify.com/playlist/…"
+        value="${link}"
+        oninput="setPlayerLink('${player}', this.value)">
+      <button class="btn btn-primary btn-sm" onclick="loadPlaylist('${player}')">⬇️ Songs laden</button>
     </div>
     ${statusHtml}
     ${songs.length ? `<p class="muted" style="font-size:0.85rem; margin-top:4px">
-        ${songs.length} Song${songs.length !== 1 ? 's' : ''} erkannt · zum Korrigieren tippen
+        ${songs.length} Song${songs.length !== 1 ? 's' : ''} geladen · zum Korrigieren tippen
       </p>` : ''}
     <div class="song-edit-list">${editRows}</div>
     ${songs.length ? `<button class="btn btn-ghost btn-sm" onclick="addManualSong('${player}')">+ Song manuell hinzufügen</button>` : ''}
   `;
 }
 
-function triggerUpload(inputId) {
-  document.getElementById(inputId).click();
+function setPlayerLink(player, value) {
+  state.songBattle.playerLink[player] = value;
 }
 
-async function handleScreenshot(player, files) {
-  if (!files || !files.length) return;
-  const file = files[0];
+async function loadPlaylist(player) {
+  const id = parsePlaylistId(state.songBattle.playerLink[player]);
+  if (!id) { showToast('Ungültiger Playlist-Link'); return; }
 
   // alte Songs dieses Spielers ersetzen
   state.songBattle.songs = state.songBattle.songs.filter(s => s.player !== player);
-  state.songBattle.playerStatus[player] = 'ocr';
+  state.songBattle.playerStatus[player] = 'loading';
   renderSetupArea();
 
   try {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-
-    const parsed = await ocrScreenshot(img);
-    URL.revokeObjectURL(url);
-
-    parsed.forEach(s => {
-      if (!s.title) return;
+    const tracks = await fetchPlaylistTracks(id);
+    tracks.forEach(t => {
       state.songBattle.songs.push({
         id: crypto.randomUUID(),
         player,
-        title: s.title,
-        artist: s.artist || '',
-        coverUrl: null,
-        coverTried: false,
+        title: t.title,
+        artist: t.artist || '',
+        coverUrl: t.coverUrl || null,
+        coverTried: true,
+        spotifyId: t.spotifyId,
       });
     });
-
-    state.songBattle.playerStatus[player] = parsed.length ? 'done' : 'error';
+    state.songBattle.playerStatus[player] = tracks.length ? 'done' : 'error';
+    if (!tracks.length) showToast('Keine Songs in der Playlist gefunden');
+    else showToast(`${tracks.length} Songs geladen`);
   } catch (e) {
     console.error(e);
     state.songBattle.playerStatus[player] = 'error';
-    showToast(e.message || 'OCR fehlgeschlagen');
+    showToast(e.message || 'Laden fehlgeschlagen');
   }
   renderSetupArea();
 }
 
 function updateSongField(id, field, value) {
   const song = state.songBattle.songs.find(s => s.id === id);
-  if (song) { song[field] = value.trim(); song.coverTried = false; song.coverUrl = null; }
+  if (song) song[field] = value.trim();
 }
 
 function addManualSong(player) {
   state.songBattle.songs.push({
-    id: crypto.randomUUID(), player, title: '', artist: '', coverUrl: null, coverTried: false,
+    id: crypto.randomUUID(), player, title: '', artist: '', coverUrl: null, coverTried: true,
   });
   renderSetupArea();
 }
@@ -1534,8 +1519,8 @@ function setupNextPlayer() {
   const idx    = state.songBattle.currentSetupPlayer;
   const player = PLAYERS[idx];
 
-  if (state.songBattle.playerStatus[player] === 'ocr') {
-    showToast('Bitte warten — Songs werden noch gelesen…');
+  if (state.songBattle.playerStatus[player] === 'loading') {
+    showToast('Bitte warten — Songs werden noch geladen…');
     return;
   }
   state.songBattle.playerDone[player] = true;
@@ -1688,19 +1673,14 @@ function renderBattleSide(side, song) {
   setCover(coverEl, song);
 }
 
-// Cover anzeigen (online) bzw. Platzhalter (offline / nicht gefunden)
+// Cover anzeigen (von Spotify) bzw. Platzhalter
 function setCover(el, song) {
   if (song.coverUrl) {
     el.classList.remove('placeholder');
     el.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
-    return;
-  }
-  el.classList.add('placeholder');
-  el.innerHTML = '🎵';
-  if (!song.coverTried) {
-    fetchCover(song).then(url => {
-      if (url) setCover(el, song); // nur aktualisieren wenn noch passend
-    });
+  } else {
+    el.classList.add('placeholder');
+    el.innerHTML = '🎵';
   }
 }
 
@@ -1755,9 +1735,6 @@ function showWinnerScreen(song) {
     wimg.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
   } else {
     wimg.innerHTML = '🎵';
-    fetchCover(song).then(url => {
-      if (url) wimg.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
-    });
   }
 
   addPoint(song.player, 3);
@@ -2041,9 +2018,17 @@ function renderScoreboard() {
 // ================================================
 // 14. INIT
 // ================================================
-(function init() {
+(async function init() {
   state.scores = loadScores();
   renderHomeScores();
+
+  // Rücksprung von Spotify (Login) verarbeiten
+  await handleSpotifyRedirect();
+  if (sessionStorage.getItem('sp_return') && isSpotifyAuthed()) {
+    sessionStorage.removeItem('sp_return');
+    showToast('🎧 Mit Spotify verbunden');
+    startSongBattle();
+  }
 })();
 </script>
 </body>
