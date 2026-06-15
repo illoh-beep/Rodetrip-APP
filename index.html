@@ -1115,6 +1115,7 @@ async function getKmEvent() {
 // ================================================
 const state = {
   scores: {},
+  spotifyStatus: { checked: false, ok: null, user: null, error: null },
 
   songBattle: {
     songs: [],             // { id, player, title, artist, coverUrl, coverTried }
@@ -1313,6 +1314,18 @@ async function getSpotifyToken() {
 
 function spotifyLogout() {
   localStorage.removeItem('sp_token');
+  state.spotifyStatus = { checked: false, ok: null, user: null, error: null };
+}
+
+async function checkSpotifyAccessAsync() {
+  if (!isSpotifyAuthed()) return;
+  try {
+    const me = await _spotifyGet('https://api.spotify.com/v1/me', true);
+    state.spotifyStatus = { checked: true, ok: true, user: me.display_name || me.id || null, error: null };
+  } catch (e) {
+    state.spotifyStatus = { checked: true, ok: false, user: null, error: e.message };
+  }
+  renderSetupArea();
 }
 
 // --- Playlist-ID aus Link / URI extrahieren ---
@@ -1472,6 +1485,32 @@ function renderSetupArea() {
     return;
   }
 
+  // Token vorhanden, aber noch nicht geprüft → /v1/me abrufen
+  if (!state.spotifyStatus.checked) {
+    area.innerHTML = `
+      <div class="card center" style="gap:10px; display:flex; flex-direction:column; align-items:center; margin-top:20px">
+        <div class="spinner"></div>
+        <div class="muted" style="font-size:0.9rem">Spotify-Verbindung wird geprüft…</div>
+      </div>`;
+    checkSpotifyAccessAsync();
+    return;
+  }
+
+  // Zugriff verweigert → klare Anleitung
+  if (!state.spotifyStatus.ok) {
+    area.innerHTML = `
+      <div class="card" style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:24px; text-align:center">
+        <div style="font-size:2.5rem">🚫</div>
+        <h3 style="color:var(--danger)">Kein Spotify-Zugriff</h3>
+        <p style="font-size:0.85rem; color:var(--text); line-height:1.5">${escapeHtml(state.spotifyStatus.error || 'Unbekannter Fehler')}</p>
+        <p style="font-size:0.8rem; color:var(--text); opacity:0.7; line-height:1.5">
+          Nach dem Freischalten im Dashboard:<br>erneut anmelden.
+        </p>
+        <button class="btn btn-ghost btn-sm" onclick="spotifyLogout();renderSetupArea()">↩ Neu anmelden</button>
+      </div>`;
+    return;
+  }
+
   let statusHtml = '';
   if (status === 'loading') {
     statusHtml = `<div class="ocr-status"><div class="spinner"></div>
@@ -1497,10 +1536,13 @@ function renderSetupArea() {
   `).join('');
 
   const link = escapeHtml(state.songBattle.playerLink[player] || '');
+  const userBadge = state.spotifyStatus.user
+    ? `<span style="font-size:0.78rem; color:var(--success); float:right">✓ ${escapeHtml(state.spotifyStatus.user)}</span>`
+    : '';
   area.innerHTML = `
     <div class="card" style="display:flex; flex-direction:column; gap:10px">
       <p style="color:var(--text); font-weight:600; font-size:0.95rem">
-        🎵 ${player}: öffentlichen Playlist-Link einfügen
+        🎵 ${player}: öffentlichen Playlist-Link einfügen ${userBadge}
       </p>
       <input id="pl-input-${player}" class="pl-input" inputmode="url"
         placeholder="https://open.spotify.com/playlist/…"
