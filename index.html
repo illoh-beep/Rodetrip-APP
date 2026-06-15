@@ -1547,7 +1547,8 @@ function renderSetupArea() {
 
   const link = escapeHtml(state.songBattle.playerLink[player] || '');
   const userBadge = state.spotifyStatus.user
-    ? `<span style="font-size:0.78rem; color:var(--success); float:right">✓ ${escapeHtml(state.spotifyStatus.user)}</span>`
+    ? `<span style="font-size:0.78rem; color:var(--success)">✓ ${escapeHtml(state.spotifyStatus.user)}</span>
+       <button style="font-size:0.72rem; color:var(--text); opacity:0.5; background:none; border:none; cursor:pointer; padding:0 0 0 6px" onclick="spotifyLogout();renderSetupArea()">Abmelden</button>`
     : '';
   area.innerHTML = `
     <div class="card" style="display:flex; flex-direction:column; gap:10px">
