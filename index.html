@@ -1370,7 +1370,13 @@ async function _spotifyGet(url, allowRetry) {
     }
   }
   if (res.status === 401) { spotifyLogout(); throw new Error('Login abgelaufen - bitte neu anmelden'); }
-  if (res.status === 403) throw new Error('Zugriff verweigert (403) – Stelle sicher, dass dein Spotify-Konto im Developer Dashboard freigeschaltet ist: developer.spotify.com → App → User Management');
+  if (res.status === 403) {
+    const detail = await _spotifyError(res);
+    if (state.spotifyStatus.ok) {
+      throw new Error(detail + ' – Playlist privat oder keine Berechtigung (in Spotify → Playlist-Einstellungen auf "Öffentlich" stellen)');
+    }
+    throw new Error(detail + ' – Bitte Spotify-Konto unter developer.spotify.com → App → User Management freischalten');
+  }
   if (res.status === 404) throw new Error('Playlist nicht gefunden – ist sie wirklich öffentlich?');
   if (res.status === 429) {
     const wait = parseInt(res.headers.get('Retry-After') || '5', 10);
@@ -1383,10 +1389,16 @@ async function _spotifyGet(url, allowRetry) {
 
 // --- Alle Tracks einer Playlist holen (paginiert) ---
 async function fetchPlaylistTracks(playlistId) {
+  const info = await _spotifyGet(
+    'https://api.spotify.com/v1/playlists/' + playlistId + '?fields=public,name', true
+  );
+  if (info.public === false) {
+    throw new Error('Playlist "' + (info.name || playlistId) + '" ist privat – bitte in Spotify → Playlist-Einstellungen auf "Öffentlich" stellen.');
+  }
   let url = 'https://api.spotify.com/v1/playlists/' + playlistId +
     '/tracks?limit=100';
   const out = [];
-  let first = true;
+  let first = false;
   while (url) {
     const data = await _spotifyGet(url, first);
     first = false;
