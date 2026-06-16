@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>🚗 Roadtrip Games</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    :root {
+      --bg:       #0f0f1a;
+      --card:     #1e1e30;
+      --card2:    #252540;
+      --accent:   #6c63ff;
+      --accent2:  #857dff;
+      --danger:   #e63946;
+      --success:  #2dc653;
+      --warning:  #f4a261;
+      --text:     #e8e8f0;
+      --muted:    #8888aa;
+      --radius:   16px;
+      --radius-sm: 10px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+      overscroll-behavior: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+
+    /* ===== SCREENS ===== */
+    .screen {
+      display: none;
+      flex-direction: column;
+      min-height: 100dvh;
+      padding: 16px;
+      padding-bottom: 32px;
+    }
+    .screen.active { display: flex; }
+
+    /* ===== TYPOGRAPHY ===== */
+    h1 { font-size: 2rem; font-weight: 800; }
+    h2 { font-size: 1.5rem; font-weight: 700; }
+    h3 { font-size: 1.2rem; font-weight: 600; }
+    p  { font-size: 1rem; line-height: 1.5; color: var(--muted); }
+
+    .emoji-big { font-size: 3.5rem; line-height: 1; }
+    .center { text-align: center; }
+    .muted { color: var(--muted); }
+
+    /* ===== BUTTONS ===== */
+    button, .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 64px;
+      padding: 14px 20px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1.1rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      transition: transform 0.1s, opacity 0.1s;
+      width: 100%;
+      text-decoration: none;
+    }
+    button:active, .btn:active { transform: scale(0.97); opacity: 0.85; }
+    button:disabled { opacity: 0.4; pointer-events: none; }
+
+    .btn-primary  { background: var(--accent);  color: #fff; }
+    .btn-danger   { background: var(--danger);   color: #fff; }
+    .btn-success  { background: var(--success);  color: #fff; }
+    .btn-ghost    { background: var(--card2);     color: var(--text); }
+    .btn-outline  { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
+    .btn-sm       { min-height: 44px; font-size: 0.95rem; padding: 10px 16px; }
+
+    /* ===== CARD ===== */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card + .card { margin-top: 12px; }
+
+    /* ===== GAP UTILITIES ===== */
+    .gap-8  { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .gap-16 { gap: 16px; }
+    .gap-24 { gap: 24px; }
+    .stack  { display: flex; flex-direction: column; }
+    .row    { display: flex; flex-direction: row; }
+
+    /* ===== SCORE PILL ===== */
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--card2);
+      border-radius: 99px;
+      padding: 4px 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .score-pill .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* ===== HEADER ===== */
+    .screen-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .back-btn {
+      width: 44px; height: 44px;
+      min-height: 44px;
+      border-radius: 50%;
+      background: var(--card);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      height: 1px;
+      background: var(--card2);
+      margin: 16px 0;
+    }
+
+    /* ===== BADGE ===== */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 99px;
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .badge-danger { background: var(--danger); }
+    .badge-success { background: var(--success); }
+
+    /* ================================================
+       HOME SCREEN
+    ================================================ */
+    #screen-home .logo {
+      text-align: center;
+      padding: 32px 0 8px;
+    }
+    #screen-home .logo h1 {
+      font-size: 2.2rem;
+      background: linear-gradient(135deg, var(--accent), #ff6b9d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .score-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 0;
+      scrollbar-width: none;
+    }
+    .score-strip::-webkit-scrollbar { display: none; }
+    .player-score-card {
+      flex: 1;
+      min-width: 0;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .player-score-card .name {
+      font-size: 0.85rem;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .player-score-card .pts {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1.2;
+    }
+
+    .game-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .game-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      transition: transform 0.1s;
+    }
+    .game-card:active { transform: scale(0.98); }
+    .game-card .icon { font-size: 2.4rem; flex-shrink: 0; }
+    .game-card .info { flex: 1; min-width: 0; }
+    .game-card .info h3 { margin-bottom: 2px; }
+    .game-card .info p  { font-size: 0.9rem; }
+    .game-card .arrow { color: var(--muted); font-size: 1.2rem; }
+
+    /* ================================================
+       SONG BATTLE — SETUP
+    ================================================ */
+    .player-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 0;
+      scrollbar-width: none;
+      margin-bottom: 16px;
+    }
+    .player-tabs::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex-shrink: 0;
+      min-height: 44px;
+      padding: 8px 18px;
+      border-radius: 99px;
+      background: var(--card);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.95rem;
+      position: relative;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .tab-btn .check {
+      position: absolute;
+      top: -4px; right: -4px;
+      width: 18px; height: 18px;
+      background: var(--success);
+      border-radius: 50%;
+      font-size: 0.7rem;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--card2);
+      border-radius: var(--radius);
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: border-color 0.2s;
+    }
+    .upload-zone:active { border-color: var(--accent); }
+    .upload-zone input { display: none; }
+
+    .song-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .song-thumb {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .song-thumb img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .song-thumb .remove-overlay {
+      position: absolute; inset: 0;
+      background: rgba(230, 57, 70, 0.7);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .song-thumb.marked .remove-overlay { opacity: 1; }
+    .song-thumb .owner-tag {
+      position: absolute; bottom: 4px; left: 4px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+
+    /* ================================================
+       SONG BATTLE — BATTLE
+    ================================================ */
+    #screen-song-battle {
+      padding: 0;
+    }
+    #screen-song-battle .battle-header {
+      padding: 16px;
+      text-align: center;
+    }
+    .battle-arena {
+      display: flex;
+      flex: 1;
+      height: calc(100dvh - 120px);
+    }
+    .battle-side {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 16px 12px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .battle-side .cover {
+      width: min(40vw, 220px);
+      height: min(40vw, 220px);
+      border-radius: var(--radius);
+      object-fit: cover;
+      background: var(--card2);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem;
+      flex-shrink: 0;
+    }
+    .battle-side .cover.placeholder {
+      background: linear-gradient(135deg, #2a2050, #1e1e40);
+    }
+    .battle-side .song-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+    .battle-side .song-artist {
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.2;
+    }
+    .battle-side .owner-chip {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent2);
+      background: var(--card2);
+      border-radius: 99px;
+      padding: 3px 10px;
+    }
+    .battle-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      flex-shrink: 0;
+      background: var(--bg);
+      z-index: 10;
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--accent);
+    }
+    .battle-side:active { opacity: 0.85; }
+    .battle-side.winner-flash {
+      animation: winnerFlash 0.4s ease;
+    }
+    @keyframes winnerFlash {
+      0%   { background: var(--accent); }
+      100% { background: transparent; }
+    }
+    .play-btn {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1.3rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      flex-shrink: 0;
+      touch-action: manipulation;
+      transition: transform 0.1s ease, background 0.15s ease;
+    }
+    .play-btn:active { transform: scale(0.9); }
+    .play-btn.playing { background: var(--accent2); }
+    .play-btn:disabled { opacity: 0.35; box-shadow: none; cursor: default; }
+    .winner-play-btn {
+      width: auto;
+      border-radius: 99px;
+      padding: 10px 22px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    /* ================================================
+       SONG BATTLE — WINNER
+    ================================================ */
+    #screen-song-winner {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 24px;
+    }
+    #screen-song-winner .winner-img {
+      width: min(280px, 80vw);
+      height: min(280px, 80vw);
+      object-fit: cover;
+      border-radius: var(--radius);
+      box-shadow: 0 0 40px rgba(108, 99, 255, 0.5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 5rem;
+      background: linear-gradient(135deg, #2a2050, #1e1e40);
+    }
+    #screen-song-winner .crown { font-size: 4rem; }
+    #screen-song-winner .winner-title { font-size: 1.5rem; font-weight: 800; }
+    #screen-song-winner .winner-artist { font-size: 1rem; color: var(--muted); margin-top: 2px; }
+
+    /* ================================================
+       SONG BATTLE — OCR / REVIEW LIST
+    ================================================ */
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--card2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ocr-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 12px;
+    }
+    .ocr-status .txt { font-size: 0.95rem; }
+
+    .song-edit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .song-edit-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+    }
+    .song-edit-row .fields {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .song-edit-row input {
+      background: var(--card2);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      min-height: 38px;
+      touch-action: manipulation;
+      width: 100%;
+    }
+    .song-edit-row input.artist { font-size: 0.85rem; color: var(--muted); }
+    .song-edit-row input:focus { border-color: var(--accent); }
+    .song-edit-row .del {
+      width: 40px; height: 40px; min-height: 40px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--card2);
+      font-size: 1rem;
+    }
+    .pl-input {
+      background: var(--card2);
+      border: 2px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      min-height: 50px;
+      width: 100%;
+      touch-action: manipulation;
+    }
+    .pl-input:focus { border-color: var(--accent); }
+
+    /* Review/dedupe text rows */
+    .review-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      border: 2px solid transparent;
+    }
+    .review-row.marked { border-color: var(--danger); background: rgba(230,57,70,0.12); }
+    .review-row .cover-sm {
+      width: 40px; height: 40px; border-radius: 6px;
+      object-fit: cover; flex-shrink: 0;
+      background: var(--card2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .review-row .meta { flex: 1; min-width: 0; }
+    .review-row .meta .t { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .review-row .meta .a { font-size: 0.82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .review-row .owner-tag {
+      font-size: 0.68rem; font-weight: 700; color: var(--accent2);
+      background: var(--card2); border-radius: 99px; padding: 2px 8px; flex-shrink: 0;
+    }
+    .review-row .mark-x { color: var(--danger); font-size: 1.1rem; opacity: 0; flex-shrink: 0; }
+    .review-row.marked .mark-x { opacity: 1; }
+
+    /* ================================================
+       KM SCHÄTZEN — SETUP
+    ================================================ */
+    .event-card {
+      background: linear-gradient(135deg, #1e1e40, #2a2050);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .event-card .event-icon { font-size: 3rem; margin-bottom: 8px; }
+    .event-card h2 { font-size: 1.8rem; }
+    .event-card p  { margin-top: 6px; color: var(--text); font-size: 0.95rem; }
+
+    .guess-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+    }
+    .guess-row + .guess-row { margin-top: 8px; }
+    .guess-row .player-name {
+      font-weight: 700;
+      min-width: 60px;
+    }
+    .guess-row input {
+      flex: 1;
+      background: var(--card2);
+      border: 2px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 1.1rem;
+      font-weight: 600;
+      font-family: inherit;
+      text-align: center;
+      touch-action: manipulation;
+      outline: none;
+      min-height: 48px;
+    }
+    .guess-row input:focus {
+      border-color: var(--accent);
+    }
+    .guess-row input.filled { border-color: var(--success); }
+    .guess-row .km-label { color: var(--muted); font-size: 0.9rem; }
+    .guess-row .done-icon { color: var(--success); font-size: 1.2rem; opacity: 0; }
+    .guess-row.guessed .done-icon { opacity: 1; }
+
+    /* ================================================
+       KM SCHÄTZEN — TRACKING
+    ================================================ */
+    #screen-km-tracking {
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    .distance-display {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 32px 40px;
+      text-align: center;
+      width: 100%;
+    }
+    .distance-display .km-big {
+      font-size: 4rem;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .distance-display .km-unit {
+      font-size: 1.1rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .guesses-live {
+      width: 100%;
+      background: var(--card);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .guess-live-row {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      gap: 12px;
+    }
+    .guess-live-row + .guess-live-row {
+      border-top: 1px solid var(--bg);
+    }
+    .guess-live-row .name { font-weight: 700; flex: 1; }
+    .guess-live-row .val  { font-weight: 600; color: var(--muted); }
+    .guess-live-row.closest .val { color: var(--success); }
+    .guess-live-row.closest .name::after {
+      content: ' 🎯';
+      font-size: 0.9em;
+    }
+
+    .seen-btn {
+      width: 100%;
+      min-height: 80px;
+      font-size: 1.4rem;
+      border-radius: var(--radius);
+      background: var(--danger);
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .gps-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .gps-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 1.5s infinite;
+    }
+    .gps-dot.searching { background: var(--warning); }
+    .gps-dot.error     { background: var(--danger); animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ================================================
+       KM SCHÄTZEN — RESULT
+    ================================================ */
+    #screen-km-result {
+      gap: 16px;
+    }
+    .result-winner-card {
+      background: linear-gradient(135deg, #1a2e1a, #0f2a1a);
+      border: 2px solid var(--success);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+    }
+    .result-winner-card .trophy { font-size: 3rem; }
+    .result-winner-card h2 { color: var(--success); margin-top: 8px; }
+
+    .result-table {
+      width: 100%;
+      background: var(--card);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .result-table-row {
+      display: flex;
+      padding: 14px 16px;
+      gap: 12px;
+      align-items: center;
+    }
+    .result-table-row + .result-table-row {
+      border-top: 1px solid var(--bg);
+    }
+    .result-table-row.winner-row {
+      background: rgba(45, 198, 83, 0.1);
+    }
+    .result-table-row .pos  { width: 28px; text-align: center; font-weight: 700; color: var(--muted); }
+    .result-table-row .pname { flex: 1; font-weight: 700; }
+    .result-table-row .guess-val { color: var(--muted); font-size: 0.9rem; }
+    .result-table-row .diff-val { font-weight: 600; color: var(--success); font-size: 0.9rem; }
+    .result-table-row.winner-row .diff-val { color: var(--success); }
+
+    /* ================================================
+       SCOREBOARD
+    ================================================ */
+    #screen-scoreboard .podium {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 8px;
+      padding: 24px 0;
+    }
+    .podium-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .podium-item .avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #fff;
+      background: var(--accent);
+    }
+    .podium-item:nth-child(1) .avatar { background: #c0a060; }
+    .podium-item:nth-child(2) .avatar { background: var(--accent); }
+    .podium-item:nth-child(3) .avatar { background: #7a8a9a; }
+    .podium-item .pname-pod { font-size: 0.85rem; font-weight: 700; }
+    .podium-item .pts-pod   { font-size: 1.5rem; font-weight: 900; color: var(--accent); }
+    .podium-block {
+      width: 100%;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: var(--card);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 900; color: var(--muted);
+    }
+
+    .score-list-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+    }
+    .score-list-row + .score-list-row { margin-top: 8px; }
+    .score-list-row .rank { width: 28px; font-weight: 800; color: var(--muted); text-align: center; }
+    .score-list-row .sname { flex: 1; font-weight: 700; }
+    .score-list-row .spts { font-size: 1.4rem; font-weight: 900; color: var(--accent); }
+
+    /* ================================================
+       TOAST
+    ================================================ */
+    #toast {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--card2);
+      color: var(--text);
+      padding: 12px 24px;
+      border-radius: 99px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 1000;
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ================================================
+       MANUAL KM FALLBACK
+    ================================================ */
+    .manual-km-input {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    .manual-km-input input {
+      flex: 1;
+      background: var(--card2);
+      border: 2px solid var(--card2);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      color: var(--text);
+      font-size: 1.1rem;
+      font-family: inherit;
+      min-height: 52px;
+      outline: none;
+      touch-action: manipulation;
+    }
+    .manual-km-input input:focus { border-color: var(--accent); }
+    .manual-km-input button { flex-shrink: 0; width: auto; }
+  </style>
+</head>
+<body>
+
+<!-- ================================================
+     HOME
+================================================ -->
+<div id="screen-home" class="screen active">
+  <div class="logo">
+    <div class="emoji-big">🚗</div>
+    <h1>Roadtrip Games</h1>
+    <p style="margin-top:6px">Gulli · Feli · Nico · Anna</p>
+  </div>
+
+  <div style="margin: 16px 0;">
+    <div class="row gap-8" style="margin-bottom:8px; justify-content:space-between; align-items:center">
+      <span class="muted" style="font-size:0.9rem; font-weight:600">PUNKTE</span>
+      <button class="btn btn-ghost btn-sm" style="width:auto; min-height:36px; padding:6px 14px; font-size:0.85rem" onclick="confirmReset()">Reset</button>
+    </div>
+    <div class="score-strip" id="home-scores"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <h3 style="margin-bottom:12px; color:var(--muted); font-size:0.85rem; letter-spacing:0.05em">SPIELE</h3>
+  <div class="game-list">
+    <div class="game-card" onclick="startSongBattle()">
+      <div class="icon">🎵</div>
+      <div class="info">
+        <h3>Song Battle</h3>
+        <p>Wessen Song überlebt das Turnier?</p>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="game-card" onclick="startKmSchaetzen()">
+      <div class="icon">📍</div>
+      <div class="info">
+        <h3>Kilometer Schätzen</h3>
+        <p>GPS-Tracking — wer liegt am nächsten?</p>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="game-card" style="opacity:0.4; pointer-events:none">
+      <div class="icon">🎮</div>
+      <div class="info">
+        <h3>Bald...</h3>
+        <p>Weitere Spiele kommen noch</p>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+  </div>
+
+  <div style="margin-top:auto; padding-top:20px">
+    <button class="btn btn-ghost" onclick="showScreen('scoreboard')">🏆 Rangliste anzeigen</button>
+  </div>
+</div>
+
+<!-- ================================================
+     SONG BATTLE — SETUP
+================================================ -->
+<div id="screen-song-setup" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
+    <div>
+      <h2>🎵 Song Battle</h2>
+      <p style="font-size:0.85rem">Jeder fügt seinen öffentlichen Playlist-Link ein</p>
+    </div>
+  </div>
+
+  <div class="player-tabs" id="setup-tabs"></div>
+
+  <div id="setup-player-area" class="stack gap-12" style="flex:1; overflow-y:auto"></div>
+
+  <div style="margin-top:16px" class="stack gap-8">
+    <div id="setup-progress" class="muted center" style="font-size:0.9rem"></div>
+    <button class="btn btn-primary" id="setup-next-btn" onclick="setupNextPlayer()">Fertig →</button>
+  </div>
+</div>
+
+<!-- ================================================
+     SONG BATTLE — DEDUPE
+================================================ -->
+<div id="screen-song-dedupe" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('song-setup')">‹</button>
+    <div>
+      <h2>Songs prüfen</h2>
+      <p style="font-size:0.85rem">Tippe Songs an, die doppelt/falsch sind</p>
+    </div>
+  </div>
+
+  <div id="dedupe-count" class="badge" style="margin-bottom:12px; align-self:flex-start"></div>
+
+  <div id="dedupe-list" class="stack gap-8" style="flex:1; overflow-y:auto; align-content:start"></div>
+
+  <div class="stack gap-8" style="margin-top:16px">
+    <button class="btn btn-danger btn-sm" id="dedupe-delete-btn" onclick="deleteMarked()" style="display:none">🗑️ Markierte löschen</button>
+    <button class="btn btn-primary" onclick="startTournament()">▶ Turnier starten</button>
+  </div>
+</div>
+
+<!-- ================================================
+     SONG BATTLE — BATTLE
+================================================ -->
+<div id="screen-song-battle" class="screen">
+  <div class="battle-header">
+    <div id="battle-round-label" class="muted" style="font-size:0.85rem"></div>
+    <h3 id="battle-match-label"></h3>
+    <p style="font-size:0.85rem; margin-top:4px">▶ Anhören · dann auf den Gewinner tippen</p>
+  </div>
+
+  <div class="battle-arena">
+    <div class="battle-side" id="battle-left" onclick="pickWinner('left')">
+      <div class="cover placeholder" id="battle-cover-left">🎵</div>
+      <button class="play-btn" id="battle-play-left" onclick="event.stopPropagation(); togglePlaySide('left')">▶</button>
+      <div class="song-title" id="battle-title-left"></div>
+      <div class="song-artist" id="battle-artist-left"></div>
+      <div class="owner-chip" id="battle-owner-left"></div>
+    </div>
+    <div class="battle-divider">VS</div>
+    <div class="battle-side" id="battle-right" onclick="pickWinner('right')">
+      <div class="cover placeholder" id="battle-cover-right">🎵</div>
+      <button class="play-btn" id="battle-play-right" onclick="event.stopPropagation(); togglePlaySide('right')">▶</button>
+      <div class="song-title" id="battle-title-right"></div>
+      <div class="song-artist" id="battle-artist-right"></div>
+      <div class="owner-chip" id="battle-owner-right"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     SONG BATTLE — WINNER
+================================================ -->
+<div id="screen-song-winner" class="screen">
+  <div class="crown">🏆</div>
+  <h2>Der beste Song!</h2>
+  <div id="winner-img" class="winner-img">🎵</div>
+  <div class="center">
+    <div id="winner-title" class="winner-title"></div>
+    <div id="winner-artist" class="winner-artist"></div>
+  </div>
+  <button class="play-btn winner-play-btn" id="winner-play" onclick="toggleWinnerPlay()" style="display:none">▶ Anhören</button>
+  <div class="card center" style="width:100%">
+    <p id="winner-owner" style="font-size:1.1rem; color:var(--text)"></p>
+    <p id="winner-points" class="muted" style="margin-top:4px; font-size:0.9rem"></p>
+  </div>
+  <button class="btn btn-primary" onclick="showScreen('home')">🏠 Zum Menü</button>
+  <button class="btn btn-ghost" onclick="showScreen('scoreboard')">🏆 Rangliste</button>
+</div>
+
+<!-- ================================================
+     KM SCHÄTZEN — SETUP
+================================================ -->
+<div id="screen-km-setup" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
+    <div>
+      <h2>📍 Km Schätzen</h2>
+      <p style="font-size:0.85rem">GPS-Tracking</p>
+    </div>
+  </div>
+
+  <div id="km-event-card" class="event-card"></div>
+
+  <p style="margin-bottom:12px; font-size:0.9rem; color:var(--muted)">
+    Pass das Handy rum — jeder gibt seine Schätzung ein:
+  </p>
+
+  <div id="km-guess-rows" class="stack"></div>
+
+  <div style="margin-top: auto; padding-top: 16px">
+    <button class="btn btn-primary" id="km-start-btn" onclick="kmStartTracking()" disabled>▶ Tracking starten</button>
+  </div>
+</div>
+
+<!-- ================================================
+     KM SCHÄTZEN — TRACKING
+================================================ -->
+<div id="screen-km-tracking" class="screen">
+  <div style="text-align:center; padding-top:8px">
+    <div id="tracking-event-label" class="badge" style="font-size:1rem; padding:8px 20px"></div>
+  </div>
+
+  <div class="distance-display">
+    <div class="km-big" id="km-distance">0.00</div>
+    <div class="km-unit">km zurückgelegt</div>
+  </div>
+
+  <div class="gps-status" id="gps-status">
+    <div class="gps-dot searching" id="gps-dot"></div>
+    <span id="gps-label">GPS wird gesucht…</span>
+  </div>
+
+  <div class="guesses-live" id="guesses-live"></div>
+
+  <div id="manual-mode" style="display:none" class="card">
+    <p style="color:var(--warning); font-size:0.9rem">⚠️ Kein GPS verfügbar. Gib die Distanz manuell ein:</p>
+    <div class="manual-km-input">
+      <input type="number" id="manual-km-val" placeholder="z.B. 3.5" step="0.1" min="0">
+      <button class="btn btn-primary btn-sm" style="width:auto" onclick="kmManualStop()">OK</button>
+    </div>
+  </div>
+
+  <button class="btn seen-btn" onclick="kmSeen()">🚨 GESEHEN!</button>
+</div>
+
+<!-- ================================================
+     KM SCHÄTZEN — RESULT
+================================================ -->
+<div id="screen-km-result" class="screen">
+  <div class="screen-header" style="margin-bottom:0">
+    <div>
+      <h2>Ergebnis</h2>
+      <p id="km-result-event" style="font-size:0.9rem"></p>
+    </div>
+  </div>
+
+  <div id="km-result-winner-card" class="result-winner-card"></div>
+
+  <div id="km-result-table" class="result-table"></div>
+
+  <div class="stack gap-8" style="margin-top:auto; padding-top:16px">
+    <button class="btn btn-primary" onclick="startKmSchaetzen()">🔄 Nochmal spielen</button>
+    <button class="btn btn-ghost"   onclick="showScreen('home')">🏠 Zum Menü</button>
+  </div>
+</div>
+
+<!-- ================================================
+     SCOREBOARD
+================================================ -->
+<div id="screen-scoreboard" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
+    <h2>🏆 Rangliste</h2>
+  </div>
+
+  <div id="scoreboard-podium" class="podium"></div>
+  <div id="scoreboard-list" class="stack gap-8"></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ================================================
+// 1. CONSTANTS & CONFIG
+// ================================================
+const PLAYERS = ['Gulli', 'Feli', 'Nico', 'Anna'];
+const SCORES_KEY = 'roadtrip-scores-v1';
+
+// ── AI-Swap point: replace this function later ──
+const KM_EVENTS = [
+  // ── Auto-Farben (nur seltene) ──────────────────────
+  { id: 'auto-rot',    label: '🚗 Rotes Auto',    hint: 'Das nächste rote Auto' },
+  { id: 'auto-gruen',  label: '🚗 Grünes Auto',   hint: 'Das nächste grüne Auto' },
+  { id: 'auto-gelb',   label: '🚗 Gelbes Auto',   hint: 'Das nächste gelbe Auto' },
+  { id: 'auto-orange', label: '🚗 Oranges Auto',  hint: 'Das nächste orange Auto (selten!)' },
+  { id: 'auto-pink',   label: '🚗 Pinkes Auto',   hint: 'Das nächste pinke Auto (sehr selten!)' },
+  { id: 'auto-lila',   label: '🚗 Lila Auto',     hint: 'Das nächste lila/violette Auto (extrem selten!)' },
+
+  // ── LKW-Farben ────────────────────────────────────
+  { id: 'lkw-weiss', label: '🚛 Weißer LKW', hint: 'Der nächste weiße LKW' },
+  { id: 'lkw-rot',   label: '🚛 Roter LKW',  hint: 'Der nächste rote LKW' },
+  { id: 'lkw-blau',  label: '🚛 Blauer LKW', hint: 'Der nächste blaue LKW' },
+  { id: 'lkw-gruen', label: '🚛 Grüner LKW', hint: 'Der nächste grüne LKW' },
+  { id: 'lkw-gelb',  label: '🚛 Gelber LKW', hint: 'Der nächste gelbe LKW' },
+
+  // ── Kennzeichen (blauer Streifen links am Schild) ─
+  { id: 'kz-f',  label: '🇫🇷 Kennzeichen F',  hint: 'Nächstes Auto mit F-Kennzeichen (Frankreich)' },
+  { id: 'kz-e',  label: '🇪🇸 Kennzeichen E',  hint: 'Nächstes Auto mit E-Kennzeichen (Spanien)' },
+  { id: 'kz-i',  label: '🇮🇹 Kennzeichen I',  hint: 'Nächstes Auto mit I-Kennzeichen (Italien)' },
+  { id: 'kz-a',  label: '🇦🇹 Kennzeichen A',  hint: 'Nächstes Auto mit A-Kennzeichen (Österreich)' },
+  { id: 'kz-ch', label: '🇨🇭 Kennzeichen CH', hint: 'Nächstes Auto mit CH-Kennzeichen (Schweiz)' },
+  { id: 'kz-nl', label: '🇳🇱 Kennzeichen NL', hint: 'Nächstes Auto mit NL-Kennzeichen (Niederlande)' },
+  { id: 'kz-pl', label: '🇵🇱 Kennzeichen PL', hint: 'Nächstes Auto mit PL-Kennzeichen (Polen)' },
+  { id: 'kz-b',  label: '🇧🇪 Kennzeichen B',  hint: 'Nächstes Auto mit B-Kennzeichen (Belgien)' },
+  { id: 'kz-cz', label: '🇨🇿 Kennzeichen CZ', hint: 'Nächstes Auto mit CZ-Kennzeichen (Tschechien)' },
+  { id: 'kz-hr', label: '🇭🇷 Kennzeichen HR', hint: 'Nächstes Auto mit HR-Kennzeichen (Kroatien)' },
+
+  // ── Infrastruktur ─────────────────────────────────
+  { id: 'tankstelle',  label: '⛽ Tankstelle',        hint: 'Die nächste Tankstelle (Schild reicht)' },
+  { id: 'ausfahrt',    label: '🛣️ Autobahnausfahrt',  hint: 'Das nächste Ausfahrts-Schild' },
+  { id: 'bruecke',     label: '🌉 Brücke',            hint: 'Die nächste Brücke über euch' },
+  { id: 'baustelle',   label: '🚧 Baustelle',         hint: 'Das nächste Baustellenschild' },
+  { id: 'tunnel',      label: '🕳️ Tunnel',            hint: 'Der nächste Tunnel' },
+  { id: 'raststaette', label: '🅿️ Raststätte',        hint: 'Die nächste Raststätte' },
+];
+
+async function getKmEvent() {
+  // Swap this for Claude API call later
+  return KM_EVENTS[Math.floor(Math.random() * KM_EVENTS.length)];
+}
+
+// ================================================
+// 2. STATE
+// ================================================
+const state = {
+  scores: {},
+
+  songBattle: {
+    songs: [],             // { id, player, title, artist, coverUrl, previewUrl }
+    currentSetupPlayer: 0,
+    playerDone: {},        // { 'Gulli': true, ... }
+    playerStatus: {},      // { 'Gulli': 'idle'|'loading'|'done'|'error' }
+    playerLink: {},        // { 'Gulli': '<playlist-url>' }
+    playerError: {},       // { 'Gulli': '<fehlertext>' }
+    bracket: [],           // current round pairs: [ [songA, songB], ... ]
+    bracketWinners: [],    // winners of this round
+    matchIndex: 0,
+    roundNumber: 0,
+    bye: null,             // song that got a free pass
+    winnerSong: null,      // Gewinner für Vorschau-Wiedergabe
+  },
+
+  kmGame: {
+    event: null,
+    guesses: {},           // { 'Gulli': 3.5, ... }
+    startPos: null,
+    lastPos: null,
+    distanceTraveled: 0,
+    watchId: null,
+    gpsAvailable: true,
+  },
+};
+
+// ================================================
+// 3. STORAGE
+// ================================================
+function loadScores() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SCORES_KEY));
+    if (saved) return saved;
+  } catch {}
+  return Object.fromEntries(PLAYERS.map(p => [p, 0]));
+}
+
+function saveScores() {
+  localStorage.setItem(SCORES_KEY, JSON.stringify(state.scores));
+}
+
+function addPoint(playerName, n = 1) {
+  state.scores[playerName] = (state.scores[playerName] || 0) + n;
+  saveScores();
+  renderHomeScores();
+}
+
+function confirmReset() {
+  if (confirm('Alle Punkte wirklich zurücksetzen?')) {
+    state.scores = Object.fromEntries(PLAYERS.map(p => [p, 0]));
+    saveScores();
+    renderHomeScores();
+    showToast('Punkte zurückgesetzt');
+  }
+}
+
+// ================================================
+// 4. NAVIGATION
+// ================================================
+function showScreen(id) {
+  if (id !== 'song-battle' && id !== 'song-winner') stopSongPlay();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + id);
+  if (el) {
+    el.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+  if (id === 'scoreboard') renderScoreboard();
+}
+
+// ================================================
+// 5. TOAST
+// ================================================
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ================================================
+// 5b. PLAYLIST-IMPORT (öffentliche Embed-Seite, ohne Login)
+// ================================================
+// Spotify hat den API-Zugriff auf Playlist-Songs für Development-Apps
+// gesperrt (403). Stattdessen lesen wir die öffentliche Embed-Seite der
+// Playlist aus – dort liegt die Songliste als JSON eingebettet. Kein Login nötig.
+
+// open.spotify.com erlaubt keinen direkten Browser-Fetch (CORS) → über Proxy holen.
+// Primär der eigene Val.town-Proxy (läuft überall, auch iPhone). Danach der lokale
+// serve.py-Proxy (Desktop) und ein öffentlicher Notnagel als letzte Reserve.
+const CORS_PROXIES = [
+  u => 'https://explosis173--187dfe8869b811f188e41607ee4eb77e.web.val.run/?url=' + encodeURIComponent(u),
+  u => '/proxy?url=' + encodeURIComponent(u),
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+];
+
+async function _fetchViaProxy(targetUrl) {
+  let lastErr;
+  for (const wrap of CORS_PROXIES) {
+    try {
+      const res = await fetch(wrap(targetUrl));
+      if (!res.ok) { lastErr = new Error('Proxy antwortete ' + res.status); continue; }
+      const text = await res.text();
+      if (text && text.length > 500) return text;
+      lastErr = new Error('Leere Antwort vom Proxy');
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('Kein Proxy erreichbar (Internet?)');
+}
+
+// Sucht rekursiv das erste trackList-Array irgendwo im Embed-JSON
+function _findTrackList(obj) {
+  let found = null;
+  (function walk(o) {
+    if (found || !o || typeof o !== 'object') return;
+    if (Array.isArray(o.trackList)) { found = o.trackList; return; }
+    for (const k in o) walk(o[k]);
+  })(obj);
+  return found;
+}
+
+// --- Playlist-ID aus Link / URI extrahieren ---
+function parsePlaylistId(input) {
+  input = (input || '').trim();
+  const m = input.match(/playlist[/:]([A-Za-z0-9]+)/);
+  if (m) return m[1];
+  if (/^[A-Za-z0-9]{20,30}$/.test(input)) return input;
+  return null;
+}
+
+// --- Songs einer öffentlichen Playlist über die Embed-Seite holen ---
+async function fetchPlaylistTracks(playlistId) {
+  const embedUrl = 'https://open.spotify.com/embed/playlist/' + playlistId;
+  const html = await _fetchViaProxy(embedUrl);
+
+  const m = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) throw new Error('Konnte die Playlist-Daten nicht lesen (Embed-Format geändert?)');
+
+  let data;
+  try { data = JSON.parse(m[1]); }
+  catch (e) { throw new Error('Playlist-Daten unlesbar'); }
+
+  const list = _findTrackList(data);
+  if (!list) throw new Error('Playlist leer, privat oder nicht gefunden – ist der Link wirklich öffentlich?');
+
+  const out = [];
+  list.forEach(t => {
+    const title = t.title || t.name || '';
+    if (!title) return;
+    const artist = t.subtitle
+      || (Array.isArray(t.artists) ? t.artists.map(a => a.name).join(', ') : '')
+      || '';
+    const uri = t.uri || '';
+    const idMatch = uri.match(/track:([A-Za-z0-9]+)/);
+    const cover = (t.coverArt && t.coverArt.sources && t.coverArt.sources[0] && t.coverArt.sources[0].url)
+      || (Array.isArray(t.images) && t.images[0] && t.images[0].url)
+      || null;
+    out.push({
+      title: title,
+      artist: artist,
+      coverUrl: cover,
+      previewUrl: (t.audioPreview && t.audioPreview.url) || null,
+      spotifyId: idMatch ? idMatch[1] : null,
+    });
+  });
+  if (!out.length) throw new Error('Keine Songs in der Playlist gefunden');
+  return out;
+}
+
+// ================================================
+// 6. HOME
+// ================================================
+function renderHomeScores() {
+  const el = document.getElementById('home-scores');
+  el.innerHTML = PLAYERS.map(p => `
+    <div class="player-score-card">
+      <div class="name">${p}</div>
+      <div class="pts">${state.scores[p] || 0}</div>
+    </div>
+  `).join('');
+}
+
+// ================================================
+// 7. SONG BATTLE — SETUP
+// ================================================
+function startSongBattle() {
+  state.songBattle.songs = [];
+  state.songBattle.currentSetupPlayer = 0;
+  state.songBattle.playerDone = {};
+  state.songBattle.playerStatus = {};
+  state.songBattle.playerLink = {};
+  state.songBattle.playerError = {};
+  PLAYERS.forEach(p => { state.songBattle.playerDone[p] = false; state.songBattle.playerStatus[p] = 'idle'; state.songBattle.playerLink[p] = ''; state.songBattle.playerError[p] = ''; });
+
+  renderSetupTabs();
+  renderSetupArea();
+  showScreen('song-setup');
+}
+
+function renderSetupTabs() {
+  const tabs = document.getElementById('setup-tabs');
+  tabs.innerHTML = PLAYERS.map((p, i) => {
+    const active = i === state.songBattle.currentSetupPlayer ? 'active' : '';
+    const done   = state.songBattle.playerDone[p];
+    return `<button class="btn tab-btn ${active}" onclick="switchSetupPlayer(${i})">
+      ${p}${done ? '<span class="check">✓</span>' : ''}
+    </button>`;
+  }).join('');
+}
+
+function switchSetupPlayer(i) {
+  state.songBattle.currentSetupPlayer = i;
+  renderSetupTabs();
+  renderSetupArea();
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function renderSetupArea() {
+  const idx    = state.songBattle.currentSetupPlayer;
+  const player = PLAYERS[idx];
+  const area   = document.getElementById('setup-player-area');
+  const songs  = state.songBattle.songs.filter(s => s.player === player);
+  const status = state.songBattle.playerStatus[player] || 'idle';
+  const total  = state.songBattle.songs.length;
+
+  document.getElementById('setup-progress').textContent =
+    `${total} Song${total !== 1 ? 's' : ''} insgesamt`;
+
+  const lastPlayer = idx === PLAYERS.length - 1;
+  document.getElementById('setup-next-btn').textContent =
+    lastPlayer ? '✓ Alle fertig → Songs prüfen' : `Weiter zu ${PLAYERS[idx + 1]} →`;
+
+  let statusHtml = '';
+  if (status === 'loading') {
+    statusHtml = `<div class="ocr-status"><div class="spinner"></div>
+      <div class="txt">Songs werden geladen…</div></div>`;
+  } else if (status === 'error') {
+    const errMsg = state.songBattle.playerError[player] || 'Unbekannter Fehler';
+    statusHtml = `<div class="ocr-status"><div style="font-size:1.4rem">⚠️</div>
+      <div class="txt">Konnte die Playlist nicht laden.<br>
+      <span style="color:var(--danger); font-size:0.85rem; word-break:break-word">${escapeHtml(errMsg)}</span></div></div>`;
+  }
+
+  const editRows = songs.map(s => `
+    <div class="song-edit-row" id="edit-${s.id}">
+      <div class="cover-sm">${s.coverUrl ? `<img src="${s.coverUrl}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '🎵'}</div>
+      <div class="fields">
+        <input value="${escapeHtml(s.title)}"  placeholder="Titel"
+          onchange="updateSongField('${s.id}','title',this.value)">
+        <input class="artist" value="${escapeHtml(s.artist)}" placeholder="Künstler"
+          onchange="updateSongField('${s.id}','artist',this.value)">
+      </div>
+      <button class="del" onclick="removeSong('${s.id}')">✕</button>
+    </div>
+  `).join('');
+
+  const link = escapeHtml(state.songBattle.playerLink[player] || '');
+  area.innerHTML = `
+    <div class="card" style="display:flex; flex-direction:column; gap:10px">
+      <p style="color:var(--text); font-weight:600; font-size:0.95rem">
+        🎵 ${player}: öffentlichen Playlist-Link einfügen
+      </p>
+      <input id="pl-input-${player}" class="pl-input" inputmode="url"
+        placeholder="https://open.spotify.com/playlist/…"
+        value="${link}"
+        oninput="setPlayerLink('${player}', this.value)">
+      <button class="btn btn-primary btn-sm" onclick="loadPlaylist('${player}')">⬇️ Songs laden</button>
+    </div>
+    ${statusHtml}
+    ${songs.length ? `<p class="muted" style="font-size:0.85rem; margin-top:4px">
+        ${songs.length} Song${songs.length !== 1 ? 's' : ''} geladen · zum Korrigieren tippen
+      </p>` : ''}
+    <div class="song-edit-list">${editRows}</div>
+    ${songs.length ? `<button class="btn btn-ghost btn-sm" onclick="addManualSong('${player}')">+ Song manuell hinzufügen</button>` : ''}
+  `;
+}
+
+function setPlayerLink(player, value) {
+  state.songBattle.playerLink[player] = value;
+}
+
+async function loadPlaylist(player) {
+  const id = parsePlaylistId(state.songBattle.playerLink[player]);
+  if (!id) { showToast('Ungültiger Playlist-Link'); return; }
+
+  // alte Songs dieses Spielers ersetzen
+  state.songBattle.songs = state.songBattle.songs.filter(s => s.player !== player);
+  state.songBattle.playerStatus[player] = 'loading';
+  state.songBattle.playerError[player] = '';
+  renderSetupArea();
+
+  try {
+    const tracks = await fetchPlaylistTracks(id);
+    tracks.forEach(t => {
+      state.songBattle.songs.push({
+        id: crypto.randomUUID(),
+        player,
+        title: t.title,
+        artist: t.artist || '',
+        coverUrl: t.coverUrl || null,
+        coverTried: true,
+        previewUrl: t.previewUrl || null,
+        spotifyId: t.spotifyId,
+      });
+    });
+    if (tracks.length) {
+      state.songBattle.playerStatus[player] = 'done';
+      showToast(`${tracks.length} Songs geladen`);
+    } else {
+      state.songBattle.playerStatus[player] = 'error';
+      state.songBattle.playerError[player] = 'Playlist ist leer oder enthält keine Songs.';
+    }
+  } catch (e) {
+    console.error(e);
+    state.songBattle.playerStatus[player] = 'error';
+    state.songBattle.playerError[player] = e.message || 'Laden fehlgeschlagen';
+    showToast('Laden fehlgeschlagen');
+  }
+  renderSetupArea();
+}
+
+function updateSongField(id, field, value) {
+  const song = state.songBattle.songs.find(s => s.id === id);
+  if (song) song[field] = value.trim();
+}
+
+function addManualSong(player) {
+  state.songBattle.songs.push({
+    id: crypto.randomUUID(), player, title: '', artist: '', coverUrl: null, coverTried: true,
+  });
+  renderSetupArea();
+}
+
+function removeSong(id) {
+  state.songBattle.songs = state.songBattle.songs.filter(s => s.id !== id);
+  renderSetupArea();
+}
+
+function setupNextPlayer() {
+  const idx    = state.songBattle.currentSetupPlayer;
+  const player = PLAYERS[idx];
+
+  if (state.songBattle.playerStatus[player] === 'loading') {
+    showToast('Bitte warten — Songs werden noch geladen…');
+    return;
+  }
+  state.songBattle.playerDone[player] = true;
+
+  if (idx < PLAYERS.length - 1) {
+    state.songBattle.currentSetupPlayer = idx + 1;
+    renderSetupTabs();
+    renderSetupArea();
+  } else {
+    // alle leeren/unvollständigen Songs verwerfen
+    state.songBattle.songs = state.songBattle.songs.filter(s => s.title && s.title.trim());
+    if (state.songBattle.songs.length < 2) {
+      showToast('Mindestens 2 Songs insgesamt nötig!');
+      return;
+    }
+    showDedupeScreen();
+  }
+}
+
+// ================================================
+// 8. SONG BATTLE — DEDUPE
+// ================================================
+function showDedupeScreen() {
+  autoMarkDuplicates();
+  renderReviewList();
+  showScreen('song-dedupe');
+}
+
+// exakte Doppelte (gleicher Titel+Künstler) automatisch vormarkieren
+function autoMarkDuplicates() {
+  const seen = new Set();
+  state.songBattle.songs.forEach(s => {
+    const key = (s.title + '|' + s.artist).toLowerCase().replace(/\s+/g, ' ').trim();
+    s._dupKey = key;
+    s._autoMark = seen.has(key);
+    seen.add(key);
+  });
+}
+
+function renderReviewList() {
+  const list  = document.getElementById('dedupe-list');
+  const count = document.getElementById('dedupe-count');
+  const deleteBtn = document.getElementById('dedupe-delete-btn');
+
+  count.textContent = `${state.songBattle.songs.length} Songs`;
+
+  list.innerHTML = state.songBattle.songs.map(s => `
+    <div class="review-row ${s._autoMark ? 'marked' : ''}" id="rev-${s.id}" onclick="toggleMark('${s.id}')">
+      <div class="cover-sm">🎵</div>
+      <div class="meta">
+        <div class="t">${escapeHtml(s.title) || '<span style="color:var(--muted)">(ohne Titel)</span>'}</div>
+        <div class="a">${escapeHtml(s.artist) || '—'}</div>
+      </div>
+      <span class="owner-tag">${escapeHtml(s.player)}</span>
+      <span class="mark-x">✕</span>
+    </div>
+  `).join('');
+
+  updateDeleteBtn();
+}
+
+function toggleMark(id) {
+  const el = document.getElementById('rev-' + id);
+  if (el) el.classList.toggle('marked');
+  updateDeleteBtn();
+}
+
+function updateDeleteBtn() {
+  const marked = document.querySelectorAll('.review-row.marked').length;
+  const btn = document.getElementById('dedupe-delete-btn');
+  btn.style.display = marked > 0 ? 'flex' : 'none';
+  btn.textContent   = `🗑️ ${marked} markierte löschen`;
+}
+
+function deleteMarked() {
+  const markedIds = [...document.querySelectorAll('.review-row.marked')]
+    .map(el => el.id.replace('rev-', ''));
+  state.songBattle.songs = state.songBattle.songs.filter(s => !markedIds.includes(s.id));
+  renderReviewList();
+  showToast(`${markedIds.length} Song${markedIds.length !== 1 ? 's' : ''} gelöscht`);
+}
+
+// ================================================
+// 9. SONG BATTLE — TOURNAMENT
+// ================================================
+function startTournament() {
+  const songs = [...state.songBattle.songs];
+  if (songs.length < 2) {
+    showToast('Mindestens 2 Songs nötig!');
+    return;
+  }
+
+  // Shuffle
+  songs.sort(() => Math.random() - 0.5);
+
+  state.songBattle.roundNumber   = 1;
+  state.songBattle.matchIndex    = 0;
+  state.songBattle.bracketWinners = [];
+  state.songBattle.bye           = null;
+
+  // Build first round pairs
+  state.songBattle.bracket = buildPairs(songs);
+
+  showBattleScreen();
+}
+
+function buildPairs(songs) {
+  const pairs = [];
+  for (let i = 0; i + 1 < songs.length; i += 2) {
+    pairs.push([songs[i], songs[i + 1]]);
+  }
+  if (songs.length % 2 === 1) {
+    // Last song gets a bye — stored separately
+    state.songBattle.bye = songs[songs.length - 1];
+  } else {
+    state.songBattle.bye = null;
+  }
+  return pairs;
+}
+
+function showBattleScreen() {
+  const { bracket, matchIndex, roundNumber } = state.songBattle;
+
+  if (matchIndex >= bracket.length) {
+    // Round over — collect winners
+    advanceRound();
+    return;
+  }
+
+  const total = bracket.length;
+  const [songA, songB] = bracket[matchIndex];
+
+  document.getElementById('battle-round-label').textContent =
+    roundNumber > 1 && bracket.length === 1 ? '🔥 Finale' : `Runde ${roundNumber}`;
+  document.getElementById('battle-match-label').textContent =
+    `Match ${matchIndex + 1} von ${total}`;
+
+  renderBattleSide('left', songA);
+  renderBattleSide('right', songB);
+
+  // Vorschau des vorigen Matches stoppen, Buttons für neues Match setzen
+  if (battleAudio) battleAudio.pause();
+  playingId = null;
+  refreshPlayUI();
+
+  showScreen('song-battle');
+}
+
+function renderBattleSide(side, song) {
+  document.getElementById(`battle-title-${side}`).textContent  = song.title || '(ohne Titel)';
+  document.getElementById(`battle-artist-${side}`).textContent = song.artist || '';
+  document.getElementById(`battle-owner-${side}`).textContent  = song.player;
+
+  const coverEl = document.getElementById(`battle-cover-${side}`);
+  setCover(coverEl, song);
+}
+
+// Cover anzeigen (von Spotify) bzw. Platzhalter
+function setCover(el, song) {
+  if (song.coverUrl) {
+    el.classList.remove('placeholder');
+    el.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
+  } else {
+    el.classList.add('placeholder');
+    el.innerHTML = '🎵';
+  }
+}
+
+// ── 30-Sek-Vorschau-Wiedergabe ──
+let battleAudio = null;
+let playingId = null;
+
+function _audio() {
+  if (!battleAudio) {
+    battleAudio = new Audio();
+    battleAudio.addEventListener('ended', () => { playingId = null; refreshPlayUI(); });
+  }
+  return battleAudio;
+}
+
+function _songForSide(side) {
+  const m = state.songBattle.bracket[state.songBattle.matchIndex];
+  if (!m) return null;
+  return side === 'left' ? m[0] : m[1];
+}
+
+function toggleSongPlay(song) {
+  if (!song) return;
+  if (!song.previewUrl) { showToast('Keine Vorschau für diesen Song'); return; }
+  const a = _audio();
+  if (playingId === song.id && !a.paused) {
+    a.pause(); playingId = null; refreshPlayUI(); return;
+  }
+  a.src = song.previewUrl;
+  a.currentTime = 0;
+  a.play().then(() => { playingId = song.id; refreshPlayUI(); })
+          .catch(() => showToast('Abspielen nicht möglich'));
+}
+
+function togglePlaySide(side) { toggleSongPlay(_songForSide(side)); }
+function toggleWinnerPlay()   { toggleSongPlay(state.songBattle.winnerSong); }
+
+function stopSongPlay() {
+  if (battleAudio) battleAudio.pause();
+  playingId = null;
+  refreshPlayUI();
+}
+
+function refreshPlayUI() {
+  ['left', 'right'].forEach(side => {
+    const btn = document.getElementById('battle-play-' + side);
+    if (!btn) return;
+    const song = _songForSide(side);
+    btn.disabled = !(song && song.previewUrl);
+    const on = !!song && playingId === song.id;
+    btn.textContent = on ? '⏸' : '▶';
+    btn.classList.toggle('playing', on);
+  });
+  const wbtn = document.getElementById('winner-play');
+  if (wbtn) {
+    const ws = state.songBattle.winnerSong;
+    wbtn.style.display = (ws && ws.previewUrl) ? '' : 'none';
+    const on = !!ws && playingId === ws.id;
+    wbtn.textContent = on ? '⏸ Pause' : '▶ Anhören';
+    wbtn.classList.toggle('playing', on);
+  }
+}
+
+function pickWinner(side) {
+  stopSongPlay();
+  const { bracket, matchIndex } = state.songBattle;
+  const [songA, songB] = bracket[matchIndex];
+  const winner = side === 'left' ? songA : songB;
+
+  // Flash animation
+  const el = document.getElementById('battle-' + side);
+  el.classList.add('winner-flash');
+  setTimeout(() => el.classList.remove('winner-flash'), 400);
+
+  state.songBattle.bracketWinners.push(winner);
+  state.songBattle.matchIndex++;
+
+  setTimeout(() => showBattleScreen(), 350);
+}
+
+function advanceRound() {
+  let pool = [...state.songBattle.bracketWinners];
+
+  // Add bye song if it exists
+  if (state.songBattle.bye) pool.push(state.songBattle.bye);
+
+  if (pool.length === 1) {
+    // We have a final winner!
+    showWinnerScreen(pool[0]);
+    return;
+  }
+
+  // Shuffle and build next round
+  pool.sort(() => Math.random() - 0.5);
+  state.songBattle.roundNumber++;
+  state.songBattle.matchIndex    = 0;
+  state.songBattle.bracketWinners = [];
+  state.songBattle.bracket       = buildPairs(pool);
+
+  showBattleScreen();
+}
+
+function showWinnerScreen(song) {
+  document.getElementById('winner-title').textContent  = song.title || '(ohne Titel)';
+  document.getElementById('winner-artist').textContent = song.artist || '';
+  document.getElementById('winner-owner').textContent  =
+    `🎤 ${song.player}'s Song hat gewonnen!`;
+  document.getElementById('winner-points').textContent =
+    `+3 Punkte für ${song.player}`;
+
+  const wimg = document.getElementById('winner-img');
+  if (song.coverUrl) {
+    wimg.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
+  } else {
+    wimg.innerHTML = '🎵';
+  }
+
+  state.songBattle.winnerSong = song;
+  stopSongPlay();
+  addPoint(song.player, 3);
+  showScreen('song-winner');
+}
+
+// ================================================
+// 10. KM SCHÄTZEN — SETUP
+// ================================================
+async function startKmSchaetzen() {
+  // Reset km state
+  if (state.kmGame.watchId !== null) {
+    navigator.geolocation.clearWatch(state.kmGame.watchId);
+  }
+  state.kmGame = {
+    event: null,
+    guesses: {},
+    startPos: null,
+    lastPos: null,
+    distanceTraveled: 0,
+    watchId: null,
+    gpsAvailable: true,
+  };
+
+  state.kmGame.event = await getKmEvent();
+  renderKmSetup();
+  showScreen('km-setup');
+}
+
+function renderKmSetup() {
+  const ev = state.kmGame.event;
+
+  document.getElementById('km-event-card').innerHTML = `
+    <div class="event-icon">${ev.label.split(' ')[0]}</div>
+    <h2>${ev.label.substring(ev.label.indexOf(' ') + 1)}</h2>
+    <p>${ev.hint}</p>
+  `;
+
+  const rows = document.getElementById('km-guess-rows');
+  rows.innerHTML = PLAYERS.map(p => `
+    <div class="guess-row" id="guess-row-${p}">
+      <span class="player-name">${p}</span>
+      <input type="number" id="guess-${p}" placeholder="km" step="0.1" min="0"
+        inputmode="decimal"
+        onchange="handleGuessChange('${p}')"
+        oninput="handleGuessChange('${p}')">
+      <span class="km-label">km</span>
+      <span class="done-icon">✓</span>
+    </div>
+  `).join('');
+
+  checkAllGuessed();
+}
+
+function handleGuessChange(player) {
+  const val = parseFloat(document.getElementById('guess-' + player).value);
+  if (!isNaN(val) && val >= 0) {
+    state.kmGame.guesses[player] = val;
+    document.getElementById('guess-' + player).classList.add('filled');
+    document.getElementById('guess-row-' + player).classList.add('guessed');
+  } else {
+    delete state.kmGame.guesses[player];
+    document.getElementById('guess-' + player).classList.remove('filled');
+    document.getElementById('guess-row-' + player).classList.remove('guessed');
+  }
+  checkAllGuessed();
+}
+
+function checkAllGuessed() {
+  const all = PLAYERS.every(p => state.kmGame.guesses[p] !== undefined);
+  document.getElementById('km-start-btn').disabled = !all;
+}
+
+// ================================================
+// 11. KM SCHÄTZEN — TRACKING
+// ================================================
+function kmStartTracking() {
+  showScreen('km-tracking');
+  renderGuessesLive();
+
+  const ev = state.kmGame.event;
+  document.getElementById('tracking-event-label').textContent = ev.label;
+
+  if (!navigator.geolocation) {
+    showManualMode();
+    return;
+  }
+
+  const dot   = document.getElementById('gps-dot');
+  const label = document.getElementById('gps-label');
+
+  state.kmGame.watchId = navigator.geolocation.watchPosition(
+    pos => {
+      dot.className   = 'gps-dot';
+      label.textContent = 'GPS aktiv';
+
+      const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      const acc = pos.coords.accuracy || 0; // Genauigkeit in Metern
+
+      if (!state.kmGame.startPos) {
+        // Erster Fixpunkt
+        state.kmGame.startPos = cur;
+        state.kmGame.lastPos  = cur;
+        state.kmGame.distanceTraveled = 0;
+      } else {
+        // Strecke zwischen letztem und aktuellem Punkt aufaddieren (kumulativ)
+        const segKm = haversine(
+          state.kmGame.lastPos.lat, state.kmGame.lastPos.lon,
+          cur.lat,                  cur.lon
+        );
+        const segMeters = segKm * 1000;
+
+        // GPS-Jitter filtern: nur zählen wenn die Bewegung größer ist als
+        // die Messungenauigkeit (mind. 5 m) — sonst "wandert" die Strecke im Stand
+        const minMove = Math.max(5, acc);
+        if (segMeters >= minMove) {
+          state.kmGame.distanceTraveled += segKm;
+          state.kmGame.lastPos = cur; // Bezugspunkt nur bei echter Bewegung verschieben
+        }
+      }
+
+      document.getElementById('km-distance').textContent =
+        state.kmGame.distanceTraveled.toFixed(2);
+      updateGuessesLive();
+    },
+    err => {
+      if (!state.kmGame.startPos) {
+        // GPS failed before we even started
+        showManualMode();
+      }
+      dot.className   = 'gps-dot error';
+      label.textContent = 'GPS-Fehler — manuelle Eingabe möglich';
+    },
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+  );
+}
+
+function showManualMode() {
+  document.getElementById('manual-mode').style.display = 'flex';
+  document.getElementById('gps-dot').className   = 'gps-dot error';
+  document.getElementById('gps-label').textContent = 'Kein GPS — manuelle Eingabe';
+  state.kmGame.gpsAvailable = false;
+}
+
+function kmManualStop() {
+  const val = parseFloat(document.getElementById('manual-km-val').value);
+  if (isNaN(val) || val < 0) { showToast('Bitte eine gültige Distanz eingeben'); return; }
+  state.kmGame.distanceTraveled = val;
+  kmShowResult();
+}
+
+function renderGuessesLive() {
+  const el = document.getElementById('guesses-live');
+  el.innerHTML = PLAYERS.map(p => `
+    <div class="guess-live-row" id="live-row-${p}">
+      <span class="name">${p}</span>
+      <span class="val">${(state.kmGame.guesses[p] || 0).toFixed(1)} km</span>
+    </div>
+  `).join('');
+}
+
+function updateGuessesLive() {
+  const actual = state.kmGame.distanceTraveled;
+  let closestPlayer = null, minDiff = Infinity;
+
+  PLAYERS.forEach(p => {
+    const diff = Math.abs((state.kmGame.guesses[p] || 0) - actual);
+    if (diff < minDiff) { minDiff = diff; closestPlayer = p; }
+  });
+
+  PLAYERS.forEach(p => {
+    const row = document.getElementById('live-row-' + p);
+    if (row) row.classList.toggle('closest', p === closestPlayer);
+  });
+}
+
+function kmSeen() {
+  if (state.kmGame.watchId !== null) {
+    navigator.geolocation.clearWatch(state.kmGame.watchId);
+    state.kmGame.watchId = null;
+  }
+  if (!state.kmGame.startPos && state.kmGame.gpsAvailable) {
+    showToast('GPS noch nicht bereit — warte kurz');
+    return;
+  }
+  kmShowResult();
+}
+
+function kmShowResult() {
+  const actual  = state.kmGame.distanceTraveled;
+
+  // Calculate who is closest
+  let winner = null, minDiff = Infinity;
+  const results = PLAYERS.map(p => {
+    const guess = state.kmGame.guesses[p] || 0;
+    const diff  = Math.abs(guess - actual);
+    if (diff < minDiff) { minDiff = diff; winner = p; }
+    return { player: p, guess, diff };
+  });
+
+  results.sort((a, b) => a.diff - b.diff);
+
+  // Award point
+  addPoint(winner, 1);
+
+  // Render result
+  const ev = state.kmGame.event;
+  document.getElementById('km-result-event').textContent = ev.label;
+
+  document.getElementById('km-result-winner-card').innerHTML = `
+    <div class="trophy">🎯</div>
+    <h2>${winner} gewinnt!</h2>
+    <p style="color:var(--muted); margin-top:6px; font-size:0.9rem">
+      Tatsächlich: ${actual.toFixed(2)} km · Schätzung: ${(state.kmGame.guesses[winner] || 0).toFixed(1)} km
+    </p>
+    <p style="margin-top:8px; color:var(--success); font-weight:700">+1 Punkt!</p>
+  `;
+
+  const medals = ['🥇', '🥈', '🥉', '4.'];
+  document.getElementById('km-result-table').innerHTML = results.map((r, i) => `
+    <div class="result-table-row ${i === 0 ? 'winner-row' : ''}">
+      <div class="pos">${medals[i] || (i+1)+'.'}</div>
+      <div class="pname">${r.player}</div>
+      <div class="guess-val">${r.guess.toFixed(1)} km</div>
+      <div class="diff-val">±${r.diff.toFixed(2)} km</div>
+    </div>
+  `).join('');
+
+  showScreen('km-result');
+}
+
+// ================================================
+// 12. HAVERSINE
+// ================================================
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ================================================
+// 13. SCOREBOARD
+// ================================================
+function renderScoreboard() {
+  const sorted = PLAYERS
+    .map(p => ({ player: p, pts: state.scores[p] || 0 }))
+    .sort((a, b) => b.pts - a.pts);
+
+  // Podium (top 3 only if we have at least 3)
+  const podium = document.getElementById('scoreboard-podium');
+  const podiumOrder = sorted.length >= 3 ? [sorted[1], sorted[0], sorted[2]] : sorted;
+  const heights = ['80px', '110px', '60px'];
+
+  podium.innerHTML = podiumOrder.map((s, i) => {
+    const rank = sorted.indexOf(s);
+    return `
+      <div class="podium-item">
+        <div class="avatar">${s.player[0]}</div>
+        <div class="pname-pod">${s.player}</div>
+        <div class="pts-pod">${s.pts}</div>
+        <div class="podium-block" style="height:${heights[i]}">${rank + 1}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Full list
+  const list = document.getElementById('scoreboard-list');
+  list.innerHTML = sorted.map((s, i) => `
+    <div class="score-list-row">
+      <div class="rank">${['🥇','🥈','🥉','4.'][i] || (i+1)+'.'}</div>
+      <div class="sname">${s.player}</div>
+      <div class="spts">${s.pts}</div>
+    </div>
+  `).join('');
+}
+
+// ================================================
+// 14. INIT
+// ================================================
+(function init() {
+  state.scores = loadScores();
+  renderHomeScores();
+})();
+</script>
+</body>
+</html>
