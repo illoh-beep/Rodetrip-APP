@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- immer frische Version laden (kein veralteter Safari-Cache) -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>🚗 Roadtrip Games</title>
   <style>
     /* ===== RESET & BASE ===== */
@@ -2538,9 +2542,25 @@ function showBingoResult() {
 
 function pickBingoWinner(teamIdx) {
   state.bingo.winnerTeam = teamIdx;
-  state.bingo.teams[teamIdx].forEach(p => addPoint(p, 1));
+  state.bingo.teams[teamIdx].forEach(p => addPoint(p, 1));  // beide Mitglieder +1
   showToast(`Team ${teamIdx + 1} +1 für beide!`);
-  showScreen('scoreboard');
+
+  // Bestätigung + aktueller Punktestand DIREKT hier anzeigen
+  document.getElementById('bingo-result-info').innerHTML =
+    `🎉 <b>Team ${teamIdx + 1}</b> (${escapeHtml(teamLabel(teamIdx))}) gewinnt — beide +1!`;
+
+  const sorted = PLAYERS.map(p => ({ p, pts: state.scores[p] || 0 })).sort((a, b) => b.pts - a.pts);
+  const medals = ['🥇', '🥈', '🥉', '4.'];
+  document.getElementById('bingo-winner-buttons').innerHTML = `
+    <div class="card" style="padding:12px">
+      <div style="font-size:0.8rem; color:var(--muted); font-weight:600; margin-bottom:8px">AKTUELLER STAND</div>
+      ${sorted.map((s, i) => `
+        <div style="display:flex; align-items:center; gap:10px; padding:6px 0">
+          <span style="width:28px; text-align:center">${medals[i] || (i+1)+'.'}</span>
+          <span style="flex:1; font-weight:700">${escapeHtml(s.p)}</span>
+          <span style="font-weight:900; color:var(--accent); font-size:1.2rem">${s.pts}</span>
+        </div>`).join('')}
+    </div>`;
 }
 
 // ================================================
