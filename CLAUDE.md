@@ -33,8 +33,13 @@ auf **einem iPhone im Safari-Browser** spielen. Gehostet über **GitHub Pages**.
 ## Spiel 1: Song Battle (mit Spotify, OHNE Login)
 - Jeder Spieler fügt einen **öffentlichen Spotify-Playlist-Link** ein → App lädt alle Tracks
   (Titel, Künstler, 30-Sek-Preview). **Kein Login, kein Account, kein Dashboard nötig.**
+- **Genau `SONGS_PER_PLAYER` (=20) Songs pro Spieler**: bei mehr muss aussortiert, bei
+  weniger manuell ergänzt werden. `playerSongCount()` zählt (Titel nicht leer); der
+  „Weiter"-Button ist gesperrt, bis genau 20 erreicht sind (Zähler `X / 20` im Setup).
 - Duplikate-Review (Textliste) → **K.O.-Turnier** (zwei Songs antippen = Sieger)
   → Gewinner-Song; sein Besitzer bekommt **3 Punkte**.
+- **Paarung (`buildPairs`)**: greedy nach Besitzer-Gruppengröße → es treten **immer Songs
+  zweier verschiedener Personen** an, solange möglich (gleiche nur, wenn unvermeidbar).
 - Wichtige Funktionen: `loadPlaylist()`, `fetchPlaylistTracks()`, `_fetchViaProxy()`,
   `_findTrackList()`, `startTournament()`, `buildPairs()`, `showBattleScreen()`,
   `pickWinner()`, `showWinnerScreen()`.

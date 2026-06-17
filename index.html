@@ -553,6 +553,14 @@
       touch-action: manipulation;
     }
     .pl-input:focus { border-color: var(--accent); }
+    .song-counter {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .song-counter .num  { font-size: 1.1rem; font-weight: 800; }
+    .song-counter .hint { font-size: 0.85rem; font-weight: 600; }
 
     /* Review/dedupe text rows */
     .review-row {
@@ -1117,6 +1125,12 @@
 // ================================================
 const PLAYERS = ['Gulli', 'Feli', 'Nico', 'Anna'];
 const SCORES_KEY = 'roadtrip-scores-v1';
+const SONGS_PER_PLAYER = 20;   // jeder Spieler muss genau so viele Songs haben
+
+// Zählt die gültigen Songs (mit Titel) eines Spielers
+function playerSongCount(player) {
+  return state.songBattle.songs.filter(s => s.player === player && s.title && s.title.trim()).length;
+}
 
 // ── AI-Swap point: replace this function later ──
 const KM_EVENTS = [
@@ -1400,9 +1414,27 @@ function renderSetupArea() {
   document.getElementById('setup-progress').textContent =
     `${total} Song${total !== 1 ? 's' : ''} insgesamt`;
 
+  const count = playerSongCount(player);
+  const ready = count === SONGS_PER_PLAYER;
+
   const lastPlayer = idx === PLAYERS.length - 1;
-  document.getElementById('setup-next-btn').textContent =
+  const nextBtn = document.getElementById('setup-next-btn');
+  nextBtn.textContent =
     lastPlayer ? '✓ Alle fertig → Songs prüfen' : `Weiter zu ${PLAYERS[idx + 1]} →`;
+  nextBtn.disabled = !ready;   // nur weiter mit genau 20 Songs
+
+  // Songs-Zähler / Hinweis für den aktuellen Spieler
+  let countHtml = '';
+  if (status !== 'loading') {
+    let hint, color;
+    if (ready) { hint = '✓ bereit'; color = 'var(--success)'; }
+    else if (count > SONGS_PER_PLAYER) { hint = `bitte ${count - SONGS_PER_PLAYER} entfernen`; color = 'var(--danger)'; }
+    else { hint = `noch ${SONGS_PER_PLAYER - count} hinzufügen`; color = 'var(--warning)'; }
+    countHtml = `<div class="song-counter">
+      <span class="num" style="color:${color}">${count} / ${SONGS_PER_PLAYER}</span>
+      <span class="hint" style="color:${color}">${hint}</span>
+    </div>`;
+  }
 
   let statusHtml = '';
   if (status === 'loading') {
@@ -1441,11 +1473,9 @@ function renderSetupArea() {
       <button class="btn btn-primary btn-sm" onclick="loadPlaylist('${player}')">⬇️ Songs laden</button>
     </div>
     ${statusHtml}
-    ${songs.length ? `<p class="muted" style="font-size:0.85rem; margin-top:4px">
-        ${songs.length} Song${songs.length !== 1 ? 's' : ''} geladen · zum Korrigieren tippen
-      </p>` : ''}
+    ${countHtml}
     <div class="song-edit-list">${editRows}</div>
-    ${songs.length ? `<button class="btn btn-ghost btn-sm" onclick="addManualSong('${player}')">+ Song manuell hinzufügen</button>` : ''}
+    ${status !== 'loading' ? `<button class="btn btn-ghost btn-sm" onclick="addManualSong('${player}')">+ Song manuell hinzufügen</button>` : ''}
   `;
 }
 
@@ -1495,10 +1525,19 @@ async function loadPlaylist(player) {
 
 function updateSongField(id, field, value) {
   const song = state.songBattle.songs.find(s => s.id === id);
-  if (song) song[field] = value.trim();
+  if (!song) return;
+  const wasCounted = !!(song.title && song.title.trim());
+  song[field] = value.trim();
+  // Zähler/Weiter-Button nur neu rendern, wenn sich der Titel-Status ändert
+  if (field === 'title' && wasCounted !== !!value.trim()) renderSetupArea();
 }
 
 function addManualSong(player) {
+  const rows = state.songBattle.songs.filter(s => s.player === player).length;
+  if (rows >= SONGS_PER_PLAYER) {
+    showToast(`Schon ${SONGS_PER_PLAYER} Songs — erst einen entfernen`);
+    return;
+  }
   state.songBattle.songs.push({
     id: crypto.randomUUID(), player, title: '', artist: '', coverUrl: null, coverTried: true,
   });
@@ -1518,6 +1557,14 @@ function setupNextPlayer() {
     showToast('Bitte warten — Songs werden noch geladen…');
     return;
   }
+
+  const count = playerSongCount(player);
+  if (count !== SONGS_PER_PLAYER) {
+    showToast(count > SONGS_PER_PLAYER
+      ? `${player}: ${count - SONGS_PER_PLAYER} Song(s) zu viel — bitte aussortieren`
+      : `${player}: noch ${SONGS_PER_PLAYER - count} Song(s) hinzufügen`);
+    return;
+  }
   state.songBattle.playerDone[player] = true;
 
   if (idx < PLAYERS.length - 1) {
@@ -1525,12 +1572,8 @@ function setupNextPlayer() {
     renderSetupTabs();
     renderSetupArea();
   } else {
-    // alle leeren/unvollständigen Songs verwerfen
+    // leere/unvollständige Songs verwerfen (Sicherheitsnetz)
     state.songBattle.songs = state.songBattle.songs.filter(s => s.title && s.title.trim());
-    if (state.songBattle.songs.length < 2) {
-      showToast('Mindestens 2 Songs insgesamt nötig!');
-      return;
-    }
     showDedupeScreen();
   }
 }
@@ -1622,17 +1665,36 @@ function startTournament() {
   showBattleScreen();
 }
 
+// Paarungen bilden — wenn möglich immer zwei Songs VERSCHIEDENER Besitzer.
+// Greedy: immer die zwei größten Besitzer-Gruppen gegeneinander; nur wenn nur
+// noch ein Besitzer Songs übrig hat, treten zwangsläufig zwei von ihm an.
 function buildPairs(songs) {
+  const buckets = {};
+  songs.forEach(s => { (buckets[s.player] = buckets[s.player] || []).push(s); });
+  Object.values(buckets).forEach(arr => arr.sort(() => Math.random() - 0.5)); // je Gruppe mischen
+
+  const ownersBySize = () =>
+    Object.keys(buckets).filter(p => buckets[p].length > 0)
+      .sort((a, b) => buckets[b].length - buckets[a].length);
+
   const pairs = [];
-  for (let i = 0; i + 1 < songs.length; i += 2) {
-    pairs.push([songs[i], songs[i + 1]]);
+  let bye = null;
+
+  while (true) {
+    const owners = ownersBySize();
+    const total = owners.reduce((n, p) => n + buckets[p].length, 0);
+    if (total <= 1) { if (total === 1) bye = buckets[owners[0]].pop(); break; }
+
+    if (owners.length >= 2) {
+      pairs.push([buckets[owners[0]].pop(), buckets[owners[1]].pop()]); // zwei verschiedene Besitzer
+    } else {
+      const arr = buckets[owners[0]];                                   // nur noch ein Besitzer übrig
+      pairs.push([arr.pop(), arr.pop()]);
+    }
   }
-  if (songs.length % 2 === 1) {
-    // Last song gets a bye — stored separately
-    state.songBattle.bye = songs[songs.length - 1];
-  } else {
-    state.songBattle.bye = null;
-  }
+
+  pairs.sort(() => Math.random() - 0.5); // Reihenfolge der Matches mischen
+  state.songBattle.bye = bye;
   return pairs;
 }
 
