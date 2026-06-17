@@ -73,8 +73,20 @@ auf **einem iPhone im Safari-Browser** spielen. Gehostet über **GitHub Pages**.
 - GPS-Fallback: bei verweigerter Berechtigung manuelle Distanz-Eingabe.
 - Wichtige Funktionen: `startKmSchaetzen()`, `kmStartTracking()`, `kmSeen()`, `kmShowResult()`, `haversine()`.
 
+## Spiel 3: Bingo Karten Generator (Lock-out Bingo)
+- **Ein gemeinsames 5×5-Board** für 2 zufällig ausgeloste Zweier-Teams (`drawBingoTeams()`).
+  Felder = Dinge auf Kennzeichen/Schildern, feste Verteilung **6/6/8/4/1** aus `BINGO_POOLS`
+  (`getBingoBoard()` ← KI-Swap-Punkt, baut+mischt die 25 Felder).
+- **Lock-out**: `claimCell()` — freies Feld → aktives Team (gesperrt, Teamfarbe); eigenes
+  Feld nochmal = freigeben (Verklick-Korrektur); gegnerisches = gesperrt (Toast).
+  Aktives Team über die Team-Chips (`setActiveTeam()`).
+- **Kein Auto-Ende**: `teamHasBingo()`/`BINGO_LINES` zeigen nur einen Hinweis-Banner.
+  „Spiel beenden" → `showBingoResult()` → Gewinner manuell wählen (`pickBingoWinner()`)
+  → **beide Team-Mitglieder +1**.
+- Screens: `#screen-bingo-setup`, `#screen-bingo-game`, `#screen-bingo-result`.
+
 ## Geplante Erweiterung
-Es kommen **5 weitere Spiele** dazu. Architektur ist darauf ausgelegt (Spiel-Kacheln auf Home,
+Es kommen **4 weitere Spiele** dazu. Architektur ist darauf ausgelegt (Spiel-Kacheln auf Home,
 Screens nach Muster ergänzen). `getKmEvent()` zeigt das Muster für späteren **Claude-AI-Swap**
 (hardcodiert jetzt → später `fetch` zur Anthropic-API, nur die eine Funktion tauschen).
 

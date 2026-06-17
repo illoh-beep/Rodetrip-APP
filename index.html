@@ -869,6 +869,109 @@
     }
     .manual-km-input input:focus { border-color: var(--accent); }
     .manual-km-input button { flex-shrink: 0; width: auto; }
+
+    /* ================================================
+       BINGO (Lock-out)
+    ================================================ */
+    .bingo-chips {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .bingo-chip {
+      flex: 1;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--card);
+      border: 2px solid transparent;
+      color: var(--text);
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
+    }
+    .bingo-chip .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--tc); flex-shrink: 0; }
+    .bingo-chip .nm  { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+    .bingo-chip .ct  { font-size: 1.1rem; font-weight: 900; color: var(--tc); }
+    .bingo-chip.active { border-color: var(--tc); background: color-mix(in srgb, var(--tc) 18%, var(--card)); }
+
+    .bingo-banner {
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+      background: rgba(45, 198, 83, 0.15);
+      border: 1px solid var(--success);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .bingo-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .bingo-cell {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: var(--card);
+      border: 2px solid var(--card2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px;
+      text-align: center;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      overflow: hidden;
+    }
+    .bingo-cell .txt {
+      font-size: 0.52rem;
+      line-height: 1.1;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-word;
+    }
+    /* dezenter Difficulty-Hinweis (oben-rechts Punkt) */
+    .bingo-cell::after {
+      content: "";
+      position: absolute; top: 3px; right: 3px;
+      width: 6px; height: 6px; border-radius: 50%;
+      opacity: 0.9;
+    }
+    .bingo-cell.diff-veryEasy::after { background: #2dc653; }
+    .bingo-cell.diff-easy::after     { background: #3da5ff; }
+    .bingo-cell.diff-normal::after   { background: #f4c025; }
+    .bingo-cell.diff-hard::after     { background: #f4a261; }
+    .bingo-cell.diff-veryHard::after { background: #e63946; }
+
+    .bingo-cell.claimed {
+      background: var(--own);
+      border-color: var(--own);
+    }
+    .bingo-cell.claimed .txt { color: #fff; }
+    .bingo-cell.claimed::after { display: none; }
+    .bingo-cell .check {
+      position: absolute;
+      bottom: 2px; right: 4px;
+      font-size: 0.7rem;
+      color: #fff;
+      font-weight: 900;
+    }
+    .bingo-cell.in-line { box-shadow: 0 0 0 3px #fff inset; }
+    .bingo-cell:active { transform: scale(0.96); }
   </style>
 </head>
 <body>
@@ -908,6 +1011,14 @@
       <div class="info">
         <h3>Kilometer Schätzen</h3>
         <p>GPS-Tracking — wer liegt am nächsten?</p>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="game-card" onclick="startBingo()">
+      <div class="icon">🔲</div>
+      <div class="info">
+        <h3>Bingo Karten Generator</h3>
+        <p>Lock-out Bingo — Kennzeichen & Schilder</p>
       </div>
       <div class="arrow">›</div>
     </div>
@@ -1102,6 +1213,68 @@
 </div>
 
 <!-- ================================================
+     BINGO — SETUP (Teams auslosen)
+================================================ -->
+<div id="screen-bingo-setup" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
+    <div>
+      <h2>🔲 Bingo</h2>
+      <p style="font-size:0.85rem">Lock-out Bingo in 2 Teams</p>
+    </div>
+  </div>
+
+  <p style="margin-bottom:12px; font-size:0.9rem; color:var(--muted)">
+    Zwei Teams, ein gemeinsames Board. Wer ein Feld zuerst abhakt, sperrt es fürs andere Team.
+  </p>
+
+  <div id="bingo-teams" class="stack gap-12"></div>
+
+  <div style="margin-top:auto; padding-top:16px" class="stack gap-8">
+    <button class="btn btn-ghost" onclick="drawBingoTeams()">🎲 Neu auslosen</button>
+    <button class="btn btn-primary" onclick="startBingoGame()">▶ Los geht's</button>
+  </div>
+</div>
+
+<!-- ================================================
+     BINGO — GAME (gemeinsames Board)
+================================================ -->
+<div id="screen-bingo-game" class="screen">
+  <div class="screen-header" style="margin-bottom:12px">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('bingo-setup')">‹</button>
+    <div>
+      <h2>🔲 Bingo</h2>
+      <p style="font-size:0.85rem">Wer hakt ab? Team antippen, dann Feld.</p>
+    </div>
+  </div>
+
+  <div id="bingo-team-chips" class="bingo-chips"></div>
+  <div id="bingo-banner" class="bingo-banner" style="display:none"></div>
+  <div id="bingo-grid" class="bingo-grid"></div>
+
+  <div style="margin-top:auto; padding-top:16px">
+    <button class="btn btn-primary" onclick="showBingoResult()">🏁 Spiel beenden</button>
+  </div>
+</div>
+
+<!-- ================================================
+     BINGO — RESULT (Gewinner wählen)
+================================================ -->
+<div id="screen-bingo-result" class="screen">
+  <div class="screen-header">
+    <div><h2>🏁 Wer hat gewonnen?</h2></div>
+  </div>
+
+  <div id="bingo-result-info" class="muted" style="font-size:0.9rem; margin-bottom:12px"></div>
+  <div id="bingo-winner-buttons" class="stack gap-12"></div>
+
+  <div class="stack gap-8" style="margin-top:auto; padding-top:16px">
+    <button class="btn btn-ghost" onclick="startBingo()">🔄 Nochmal (neu auslosen)</button>
+    <button class="btn btn-ghost" onclick="showScreen('home')">🏠 Zum Menü</button>
+  </div>
+</div>
+
+<!-- ================================================
      SCOREBOARD
 ================================================ -->
 <div id="screen-scoreboard" class="screen">
@@ -1175,6 +1348,61 @@ async function getKmEvent() {
   return KM_EVENTS[Math.floor(Math.random() * KM_EVENTS.length)];
 }
 
+// ── BINGO: Item-Pools nach Schwierigkeit (KI-Swap-Punkt wie getKmEvent) ──
+const BINGO_POOLS = {
+  veryEasy: [
+    'Buchstabe A', 'Buchstabe E', 'Buchstabe M', 'Buchstabe N',
+    'Ziffer 0', 'Ziffer 1', 'Ziffer 2', 'Ziffer 3',
+    'Blaues EU-Feld (Sterne)', 'Tempolimit-Schild',
+  ],
+  easy: [
+    'Buchstabe K', 'Buchstabe S', 'Buchstabe L', 'Buchstabe R', 'Buchstabe G',
+    'Eine 7', 'Gelbes Ortsschild', 'Autobahn-Nr. (z. B. A 7)',
+    'Nur 1 Buchstabe vorne (Großstadt)', 'Zweistellige Tempo-Zahl',
+  ],
+  normal: [
+    'Buchstabe Z', 'Buchstabe W', 'Buchstabe J', 'Buchstabe V',
+    'Zahl über 800', 'Ausländisches Kennzeichen (NL/A/CH)',
+    'Entfernungsschild „Stadt + km“', 'Doppelziffer (88, 99)',
+    '3 Buchstaben in der Mitte', 'Bundesstraße „B …“',
+  ],
+  hard: [
+    'Buchstabe Q', 'Buchstabe Y', 'Buchstabe X',
+    'Spiegelzahl/Palindrom (121, 343)', 'Kennzeichen F / I / E',
+    'Drei gleiche Ziffern (555)', 'Initialen eines Mitfahrers',
+  ],
+  veryHard: [
+    'Buchstaben ergeben ein Wort (OMA, LOL)',
+    'Vier gleiche Ziffern (7777)',
+    'Kennzeichen von weit weg (PL, GR)',
+  ],
+};
+
+// Verteilung pro Karte: 6 / 6 / 8 / 4 / 1  (= 25)
+const BINGO_DISTRIBUTION = [
+  ['veryEasy', 6], ['easy', 6], ['normal', 8], ['hard', 4], ['veryHard', 1],
+];
+
+function _pickN(arr, n) {
+  const pool = arr.slice();
+  const out = [];
+  for (let i = 0; i < n && pool.length; i++) {
+    out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  return out;
+}
+
+// Baut ein 5×5-Board (25 Felder) mit fester Verteilung; Platzierung gemischt.
+// Später swapbar gegen eine Claude-Generierung.
+async function getBingoBoard() {
+  const cells = [];
+  BINGO_DISTRIBUTION.forEach(([diff, n]) => {
+    _pickN(BINGO_POOLS[diff], n).forEach(text => cells.push({ text, diff, owner: null }));
+  });
+  cells.sort(() => Math.random() - 0.5); // Platzierung mischen
+  return cells;
+}
+
 // ================================================
 // 2. STATE
 // ================================================
@@ -1204,6 +1432,13 @@ const state = {
     distanceTraveled: 0,
     watchId: null,
     gpsAvailable: true,
+  },
+
+  bingo: {
+    teams: [],             // [[p,p],[p,p]] zufällig ausgelost
+    board: [],             // 25 Felder: { text, diff, owner: null|0|1 }
+    activeTeam: 0,         // welches Team gerade abhakt
+    winnerTeam: null,
   },
 };
 
@@ -2153,6 +2388,146 @@ function haversine(lat1, lon1, lat2, lon2) {
     + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
     * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ================================================
+// 12b. BINGO (Lock-out)
+// ================================================
+const BINGO_TEAM_COLORS = ['#6c63ff', '#f4a261']; // Team A (lila), Team B (orange)
+
+async function startBingo() {
+  drawBingoTeams();          // lost Teams + erzeugt Board
+  showScreen('bingo-setup');
+}
+
+function drawBingoTeams() {
+  const shuffled = PLAYERS.slice().sort(() => Math.random() - 0.5);
+  state.bingo.teams = [[shuffled[0], shuffled[1]], [shuffled[2], shuffled[3]]];
+  state.bingo.activeTeam = 0;
+  state.bingo.winnerTeam = null;
+  renderBingoTeams();
+}
+
+function teamLabel(i) {
+  return (state.bingo.teams[i] || []).join(' + ');
+}
+
+function renderBingoTeams() {
+  const el = document.getElementById('bingo-teams');
+  el.innerHTML = state.bingo.teams.map((team, i) => `
+    <div class="card" style="display:flex; align-items:center; gap:14px; border-left:6px solid ${BINGO_TEAM_COLORS[i]}">
+      <div style="font-size:1.6rem">${i === 0 ? '🟣' : '🟠'}</div>
+      <div>
+        <div style="font-size:0.8rem; color:var(--muted); font-weight:600">TEAM ${i + 1}</div>
+        <div style="font-weight:800; font-size:1.1rem">${escapeHtml(teamLabel(i))}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function startBingoGame() {
+  state.bingo.board = await getBingoBoard();
+  state.bingo.activeTeam = 0;
+  state.bingo.winnerTeam = null;
+  renderBingoGame();
+  showScreen('bingo-game');
+}
+
+function setActiveTeam(i) {
+  state.bingo.activeTeam = i;
+  renderBingoGame();
+}
+
+function claimCell(idx) {
+  const cell = state.bingo.board[idx];
+  const active = state.bingo.activeTeam;
+  if (cell.owner === null) {
+    cell.owner = active;                 // freies Feld beanspruchen (sperren)
+  } else if (cell.owner === active) {
+    cell.owner = null;                   // eigenes Feld wieder freigeben (Verklick)
+  } else {
+    showToast(`Gehört Team ${cell.owner + 1} — gesperrt`);
+    return;
+  }
+  renderBingoGame();
+}
+
+// Bingo-Linien (Indizes im 5×5-Raster)
+const BINGO_LINES = (() => {
+  const lines = [];
+  for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r*5 + c));   // Reihen
+  for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r*5 + c));   // Spalten
+  lines.push([0,6,12,18,24]);                                             // Diagonale ↘
+  lines.push([4,8,12,16,20]);                                             // Diagonale ↙
+  return lines;
+})();
+
+function bingoLinesFor(teamIdx) {
+  return BINGO_LINES.filter(line => line.every(i => state.bingo.board[i].owner === teamIdx));
+}
+function teamHasBingo(teamIdx) { return bingoLinesFor(teamIdx).length > 0; }
+
+function renderBingoGame() {
+  // Team-Chips (Auswahl, wer abhakt)
+  document.getElementById('bingo-team-chips').innerHTML = state.bingo.teams.map((team, i) => {
+    const activeCls = i === state.bingo.activeTeam ? 'active' : '';
+    const count = state.bingo.board.filter(c => c.owner === i).length;
+    return `<button class="bingo-chip ${activeCls}" style="--tc:${BINGO_TEAM_COLORS[i]}" onclick="setActiveTeam(${i})">
+      <span class="dot"></span>
+      <span class="nm">${escapeHtml(teamLabel(i))}</span>
+      <span class="ct">${count}</span>
+    </button>`;
+  }).join('');
+
+  // Bingo-Hinweis (kein Auto-Ende)
+  const banner = document.getElementById('bingo-banner');
+  const winners = [0, 1].filter(teamHasBingo);
+  if (winners.length) {
+    banner.style.display = 'flex';
+    banner.innerHTML = winners.map(i => `🎉 Team ${i + 1} (${escapeHtml(teamLabel(i))}) hat Bingo!`).join('<br>');
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Linien-Zellen markieren (für Hervorhebung)
+  const lineCells = new Set();
+  winners.forEach(i => bingoLinesFor(i).forEach(line => line.forEach(idx => lineCells.add(idx))));
+
+  // Grid
+  document.getElementById('bingo-grid').innerHTML = state.bingo.board.map((cell, idx) => {
+    const ownerCls = cell.owner !== null ? 'claimed' : '';
+    const lineCls = lineCells.has(idx) ? 'in-line' : '';
+    const bg = cell.owner !== null ? `style="--own:${BINGO_TEAM_COLORS[cell.owner]}"` : '';
+    return `<div class="bingo-cell diff-${cell.diff} ${ownerCls} ${lineCls}" ${bg} onclick="claimCell(${idx})">
+      <span class="txt">${escapeHtml(cell.text)}</span>
+      ${cell.owner !== null ? '<span class="check">✓</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function showBingoResult() {
+  const winners = [0, 1].filter(teamHasBingo);
+  document.getElementById('bingo-result-info').textContent = winners.length === 1
+    ? `Team ${winners[0] + 1} hat eine volle Reihe — bestätige den Gewinner.`
+    : (winners.length === 2
+        ? 'Beide Teams haben Bingo — wählt den Gewinner.'
+        : 'Noch kein Bingo — wählt trotzdem den Gewinner (oder zurück).');
+
+  document.getElementById('bingo-winner-buttons').innerHTML = state.bingo.teams.map((team, i) => `
+    <button class="btn" style="background:${BINGO_TEAM_COLORS[i]}; color:#fff"
+      onclick="pickBingoWinner(${i})">
+      ${i === 0 ? '🟣' : '🟠'} Team ${i + 1} gewinnt — ${escapeHtml(teamLabel(i))}
+    </button>
+  `).join('');
+
+  showScreen('bingo-result');
+}
+
+function pickBingoWinner(teamIdx) {
+  state.bingo.winnerTeam = teamIdx;
+  state.bingo.teams[teamIdx].forEach(p => addPoint(p, 1));
+  showToast(`Team ${teamIdx + 1} +1 für beide!`);
+  showScreen('scoreboard');
 }
 
 // ================================================
