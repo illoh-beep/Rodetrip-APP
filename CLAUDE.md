@@ -30,33 +30,35 @@ auf **einem iPhone im Safari-Browser** spielen. Gehostet über **GitHub Pages**.
   - **7. Song Battle Setup**, **8. Dedupe/Review**, **9. Turnier**
   - **10./11. Km Schätzen** (inkl. GPS), **12. Haversine**, **13. Scoreboard**, **14. Init**
 
-## Spiel 1: Song Battle (mit Spotify)
+## Spiel 1: Song Battle (mit Spotify, OHNE Login)
 - Jeder Spieler fügt einen **öffentlichen Spotify-Playlist-Link** ein → App lädt alle Tracks
-  (Titel, Künstler, Cover direkt von Spotify).
-- Duplikate-Review (Textliste) → **K.O.-Turnier** (zwei Songs als Text+Cover, antippen = Sieger)
+  (Titel, Künstler, 30-Sek-Preview). **Kein Login, kein Account, kein Dashboard nötig.**
+- Duplikate-Review (Textliste) → **K.O.-Turnier** (zwei Songs antippen = Sieger)
   → Gewinner-Song; sein Besitzer bekommt **3 Punkte**.
-- Wichtige Funktionen: `loadPlaylist()`, `fetchPlaylistTracks()`, `startTournament()`,
-  `buildPairs()`, `showBattleScreen()`, `pickWinner()`, `showWinnerScreen()`.
+- Wichtige Funktionen: `loadPlaylist()`, `fetchPlaylistTracks()`, `_fetchViaProxy()`,
+  `_findTrackList()`, `startTournament()`, `buildPairs()`, `showBattleScreen()`,
+  `pickWinner()`, `showWinnerScreen()`.
 
-### Spotify-Setup (PKCE, kein Secret — passt zu statischem Hosting)
-- `SPOTIFY_CLIENT_ID = '01154e8461b5413193b17043685672f4'`
-- Flow: `spotifyLogin()` (PKCE) → Weiterleitung zu Spotify → Rücksprung wird in
-  `handleSpotifyRedirect()` (in `init`) verarbeitet → Token in `localStorage` (`sp_token`).
-- Scopes: `playlist-read-private playlist-read-collaborative`.
-  **`SPOTIFY_SCOPE_VERSION`** erzwingt Neu-Login, wenn Scopes geändert werden (hochzählen!).
-- **Nur EINE Person muss sich einloggen** — öffentliche Playlists sind mit jedem gültigen Token lesbar.
-- **Redirect URIs** müssen im Spotify-Dashboard **zeichengenau** eingetragen sein
-  (developer.spotify.com → App → Settings → Redirect URIs):
-  - `https://illoh-beep.github.io/Rodetrip-APP/`  (Live, mit Schrägstrich!)
-  - `http://127.0.0.1:8080/`  (lokal — **nicht** `localhost`, das lehnt Spotify ab)
-- **Development Mode**: nur unter *User Management* freigeschaltete Spotify-Konten dürfen die App nutzen.
+### Spotify-Anbindung (Niklas-Ansatz: Embed-Seite über CORS-Proxy)
+- **Kein OAuth/PKCE mehr.** Stattdessen: `fetchPlaylistTracks(id)` lädt die öffentliche
+  Embed-Seite `https://open.spotify.com/embed/playlist/{id}` über einen **CORS-Proxy**,
+  liest das `<script id="__NEXT_DATA__">`-JSON und sucht rekursiv (`_findTrackList`) das
+  erste `trackList`-Array.
+- `CORS_PROXIES` (Reihenfolge mit Fallback) in `index.html` (~Zeile 1240):
+  1. `https://explosis173--…web.val.run/?url=`  ← funktioniert (Niklas' Instanz)
+  2. `/proxy?url=`  ← nur mit lokalem Server, **nicht** auf GitHub Pages
+  3. `https://api.allorigins.win/raw?url=`  ← öffentlich, wackelig
+- **Pro Track liefert das Embed-JSON:** `title`, `subtitle` (Künstler), `duration`,
+  `audioPreview.url` (30-Sek-MP3!), `uri`. **KEIN Album-Cover pro Track** → `coverUrl`
+  bleibt `null`, App zeigt 🎵-Platzhalter (sauber abgefangen).
+- **Fragilität (bewusst in Kauf genommen):** hängt an externem Proxy + an Spotifys
+  Embed-Format. Ändert Spotify `__NEXT_DATA__`, bricht das Parsen.
 
-### ⚠️ OFFENES PROBLEM (Stand zuletzt)
-Login klappt, aber **Playlist-Laden schlägt teils fehl**. Fehler werden jetzt im Setup-Screen
-**im Klartext** angezeigt (`Spotify 403: …` / `Spotify 404: …`, gespeichert in
-`state.songBattle.playerError`). Nächster Schritt: exakten Code vom Nutzer geben lassen.
-- `403` → meist Development-Mode/User-Management im Dashboard (Konto freischalten)
-- `404` → Playlist nicht wirklich öffentlich
+### Mögliche nächste Schritte
+- **Cover nachrüsten** (optional): per Titel+Künstler über die **iTunes Search API**
+  (kostenlos, kein Key, CORS ok) holen — nur fürs Battle-/Winner-Cover.
+- **Preview-Playback**: `audioPreview.url` (30 s) ist vorhanden → echtes Anspielen der
+  beiden Songs im Battle wäre möglich (passt zur ursprünglichen Spielidee).
 
 ## Spiel 2: Kilometer Schätzen (GPS)
 - App zieht ein Ereignis aus `KM_EVENTS` (Auto-/LKW-Farben, Kennzeichen-Länder, Infrastruktur).
@@ -74,8 +76,8 @@ Screens nach Muster ergänzen). `getKmEvent()` zeigt das Muster für späteren *
 - Lokaler Server: `python3 -m http.server 8080` (siehe `.claude/launch.json`), dann
   **`http://127.0.0.1:8080/`** öffnen (wegen Spotify-Redirect, nicht `localhost`).
 - **JS-Syntaxcheck**: JS aus `index.html` extrahieren und `node --check` laufen lassen.
-- **Nicht im Cloud/Desktop testbar**: echter Spotify-Login-Redirect und GPS — das muss der
-  Nutzer auf seinem **echten Handy** prüfen. Cloud/Desktop kann nur Code + Logik verifizieren.
+- **Playlist-Laden** ist Desktop/Cloud testbar, **solange der CORS-Proxy erreichbar ist**
+  (val.run-Instanz). **GPS** dagegen nur auf dem **echten Handy** prüfbar.
 
 ## Deploy
 - Push auf **`main`** → GitHub Pages baut automatisch.
