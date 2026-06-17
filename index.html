@@ -435,6 +435,23 @@
       gap: 6px;
       margin-top: 4px;
     }
+    .spotify-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #1DB954;
+      color: #fff;
+      border-radius: 99px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .spotify-btn::before { content: "♫"; font-size: 0.95rem; }
+    .spotify-btn:active { transform: scale(0.96); }
 
     /* ================================================
        SONG BATTLE — WINNER
@@ -962,6 +979,8 @@
       <div class="song-title" id="battle-title-left"></div>
       <div class="song-artist" id="battle-artist-left"></div>
       <div class="owner-chip" id="battle-owner-left"></div>
+      <a class="spotify-btn" id="battle-spotify-left" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()">In Spotify öffnen</a>
     </div>
     <div class="battle-divider">VS</div>
     <div class="battle-side" id="battle-right" onclick="pickWinner('right')">
@@ -970,6 +989,8 @@
       <div class="song-title" id="battle-title-right"></div>
       <div class="song-artist" id="battle-artist-right"></div>
       <div class="owner-chip" id="battle-owner-right"></div>
+      <a class="spotify-btn" id="battle-spotify-right" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()">In Spotify öffnen</a>
     </div>
   </div>
 </div>
@@ -986,6 +1007,7 @@
     <div id="winner-artist" class="winner-artist"></div>
   </div>
   <button class="play-btn winner-play-btn" id="winner-play" onclick="toggleWinnerPlay()" style="display:none">▶ Anhören</button>
+  <a class="spotify-btn" id="winner-spotify" target="_blank" rel="noopener" style="display:none">In Spotify öffnen</a>
   <div class="card center" style="width:100%">
     <p id="winner-owner" style="font-size:1.1rem; color:var(--text)"></p>
     <p id="winner-points" class="muted" style="margin-top:4px; font-size:0.9rem"></p>
@@ -1450,7 +1472,7 @@ async function loadPlaylist(player) {
         title: t.title,
         artist: t.artist || '',
         coverUrl: t.coverUrl || null,
-        coverTried: true,
+        coverTried: false,
         previewUrl: t.previewUrl || null,
         spotifyId: t.spotifyId,
       });
@@ -1649,17 +1671,60 @@ function renderBattleSide(side, song) {
 
   const coverEl = document.getElementById(`battle-cover-${side}`);
   setCover(coverEl, song);
+
+  const spBtn = document.getElementById(`battle-spotify-${side}`);
+  if (spBtn) {
+    const url = spotifyTrackUrl(song);
+    if (url) { spBtn.href = url; spBtn.style.display = ''; }
+    else spBtn.style.display = 'none';
+  }
 }
 
-// Cover anzeigen (von Spotify) bzw. Platzhalter
+// Link zum exakten Song in Spotify (öffnet die Spotify-App)
+function spotifyTrackUrl(song) {
+  return song && song.spotifyId ? 'https://open.spotify.com/track/' + song.spotifyId : null;
+}
+
+// Cover anzeigen; fehlt es (Spotify-Embed liefert keins) → via iTunes nachladen
 function setCover(el, song) {
   if (song.coverUrl) {
     el.classList.remove('placeholder');
     el.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
-  } else {
-    el.classList.add('placeholder');
-    el.innerHTML = '🎵';
+    return;
   }
+  el.classList.add('placeholder');
+  el.innerHTML = '🎵';
+  if (!song.coverTried) {
+    fetchCover(song).then(url => {
+      if (url) setCover(el, song); // erneut rendern, sobald Cover da ist
+    });
+  }
+}
+
+// Echtes Album-Cover von Spotify über die Track-oEmbed holen
+// (kein Key, CORS direkt erlaubt; Proxy als Fallback). Exakt per spotifyId.
+async function fetchCover(song) {
+  if (song.coverUrl) return song.coverUrl;
+  if (song.coverTried) return null;
+  song.coverTried = true;
+  if (!song.spotifyId) return null;
+  const oembed = 'https://open.spotify.com/oembed?url=' +
+    encodeURIComponent('https://open.spotify.com/track/' + song.spotifyId);
+  // 1) direkt (CORS ok)
+  try {
+    const r = await fetch(oembed);
+    if (r.ok) { const j = await r.json(); if (j.thumbnail_url) { song.coverUrl = j.thumbnail_url; return song.coverUrl; } }
+  } catch (e) { /* weiter zum Proxy */ }
+  // 2) Fallback über CORS-Proxy
+  for (const wrap of CORS_PROXIES) {
+    try {
+      const r = await fetch(wrap(oembed));
+      if (!r.ok) continue;
+      const j = JSON.parse(await r.text());
+      if (j.thumbnail_url) { song.coverUrl = j.thumbnail_url; return song.coverUrl; }
+    } catch (e) { /* nächster Proxy */ }
+  }
+  return song.coverUrl || null;
 }
 
 // ── 30-Sek-Vorschau-Wiedergabe ──
@@ -1770,11 +1835,19 @@ function showWinnerScreen(song) {
     `+3 Punkte für ${song.player}`;
 
   const wimg = document.getElementById('winner-img');
-  if (song.coverUrl) {
-    wimg.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
-  } else {
-    wimg.innerHTML = '🎵';
-  }
+  const paintWinnerCover = () => {
+    if (song.coverUrl) {
+      wimg.innerHTML = `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius)" alt="">`;
+    } else {
+      wimg.innerHTML = '🎵';
+    }
+  };
+  paintWinnerCover();
+  if (!song.coverUrl && !song.coverTried) fetchCover(song).then(u => { if (u) paintWinnerCover(); });
+
+  const wsp = document.getElementById('winner-spotify');
+  const wurl = spotifyTrackUrl(song);
+  if (wurl) { wsp.href = wurl; wsp.style.display = ''; } else { wsp.style.display = 'none'; }
 
   state.songBattle.winnerSong = song;
   stopSongPlay();

@@ -49,16 +49,17 @@ auf **einem iPhone im Safari-Browser** spielen. Gehostet über **GitHub Pages**.
   2. `/proxy?url=`  ← nur mit lokalem Server, **nicht** auf GitHub Pages
   3. `https://api.allorigins.win/raw?url=`  ← öffentlich, wackelig
 - **Pro Track liefert das Embed-JSON:** `title`, `subtitle` (Künstler), `duration`,
-  `audioPreview.url` (30-Sek-MP3!), `uri`. **KEIN Album-Cover pro Track** → `coverUrl`
-  bleibt `null`, App zeigt 🎵-Platzhalter (sauber abgefangen).
+  `audioPreview.url` (30-Sek-MP3), `uri` (→ `spotifyId`). **Kein Cover im Embed.**
+- **Cover** kommt deshalb über `fetchCover(song)` aus der **Spotify-Track-oEmbed**
+  (`open.spotify.com/oembed?url=…/track/{id}` → `thumbnail_url`): kein Key, CORS direkt
+  erlaubt, Proxy als Fallback, exakt per `spotifyId`. Lazy beim Battle/Winner geladen.
+- **Preview-Playback** (Niklas): `togglePlaySide()`/`toggleSongPlay()` spielen die
+  30-Sek-`audioPreview` im Battle (`▶`-Button), `stopSongPlay()` stoppt.
+- **„In Spotify öffnen"-Button** (`.spotify-btn`): `spotifyTrackUrl(song)` →
+  `open.spotify.com/track/{id}`, öffnet den exakten Song in der Spotify-App
+  (Battle beide Seiten + Winner; `event.stopPropagation()` verhindert Sieger-Auswahl).
 - **Fragilität (bewusst in Kauf genommen):** hängt an externem Proxy + an Spotifys
   Embed-Format. Ändert Spotify `__NEXT_DATA__`, bricht das Parsen.
-
-### Mögliche nächste Schritte
-- **Cover nachrüsten** (optional): per Titel+Künstler über die **iTunes Search API**
-  (kostenlos, kein Key, CORS ok) holen — nur fürs Battle-/Winner-Cover.
-- **Preview-Playback**: `audioPreview.url` (30 s) ist vorhanden → echtes Anspielen der
-  beiden Songs im Battle wäre möglich (passt zur ursprünglichen Spielidee).
 
 ## Spiel 2: Kilometer Schätzen (GPS)
 - App zieht ein Ereignis aus `KM_EVENTS` (Auto-/LKW-Farben, Kennzeichen-Länder, Infrastruktur).
