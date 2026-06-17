@@ -940,38 +940,40 @@
     .bingo-cell .txt {
       font-size: 0.52rem;
       line-height: 1.1;
-      font-weight: 600;
-      color: var(--text);
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.55);
       word-break: break-word;
     }
-    /* dezenter Difficulty-Hinweis (oben-rechts Punkt) */
-    .bingo-cell::after {
-      content: "";
-      position: absolute; top: 3px; right: 3px;
-      width: 6px; height: 6px; border-radius: 50%;
-      opacity: 0.9;
-    }
-    .bingo-cell.diff-veryEasy::after { background: #2dc653; }
-    .bingo-cell.diff-easy::after     { background: #3da5ff; }
-    .bingo-cell.diff-normal::after   { background: #f4c025; }
-    .bingo-cell.diff-hard::after     { background: #f4a261; }
-    .bingo-cell.diff-veryHard::after { background: #e63946; }
+    /* Zelle wird nach Schwierigkeit eingefärbt (festes Layout, wie Vorlage) */
+    .bingo-cell.diff-veryEasy { background: #6cae28; border-color: #5b9621; } /* sehr einfach – grün */
+    .bingo-cell.diff-easy     { background: #4a86c7; border-color: #3d72ac; } /* einfach – blau */
+    .bingo-cell.diff-normal   { background: #b3b531; border-color: #989a27; } /* normal – oliv */
+    .bingo-cell.diff-hard     { background: #9c2f2f; border-color: #832727; } /* schwer – dunkelrot */
+    .bingo-cell.diff-veryHard { background: #b23ba0; border-color: #97328a; } /* sehr schwer – magenta */
 
+    /* Beansprucht (Lock-out): Team-Farbe überlagert die Schwierigkeit */
     .bingo-cell.claimed {
       background: var(--own);
-      border-color: var(--own);
+      border-color: #fff;
     }
     .bingo-cell.claimed .txt { color: #fff; }
-    .bingo-cell.claimed::after { display: none; }
     .bingo-cell .check {
       position: absolute;
-      bottom: 2px; right: 4px;
-      font-size: 0.7rem;
+      top: 2px; right: 4px;
+      font-size: 0.8rem;
       color: #fff;
       font-weight: 900;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
     .bingo-cell.in-line { box-shadow: 0 0 0 3px #fff inset; }
     .bingo-cell:active { transform: scale(0.96); }
+
+    .bingo-win-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; width: 100%;
+    }
+    .bingo-win-row + .bingo-win-row { margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -1378,9 +1380,14 @@ const BINGO_POOLS = {
   ],
 };
 
-// Verteilung pro Karte: 6 / 6 / 8 / 4 / 1  (= 25)
-const BINGO_DISTRIBUTION = [
-  ['veryEasy', 6], ['easy', 6], ['normal', 8], ['hard', 4], ['veryHard', 1],
+// FESTES Schwierigkeits-Layout (5×5, row-major) — exakt wie vom Nutzer vorgegeben.
+// Verteilung: 6 sehr einfach · 6 einfach · 8 normal · 4 schwer · 1 sehr schwer (=25).
+const BINGO_LAYOUT = [
+  'veryEasy', 'normal',   'easy',     'hard',     'normal',
+  'hard',     'normal',   'veryEasy', 'easy',     'normal',
+  'easy',     'veryEasy', 'veryHard', 'veryEasy', 'easy',
+  'normal',   'easy',     'veryEasy', 'normal',   'hard',
+  'normal',   'hard',     'easy',     'normal',   'veryEasy',
 ];
 
 function _pickN(arr, n) {
@@ -1392,15 +1399,14 @@ function _pickN(arr, n) {
   return out;
 }
 
-// Baut ein 5×5-Board (25 Felder) mit fester Verteilung; Platzierung gemischt.
-// Später swapbar gegen eine Claude-Generierung.
+// Baut das 5×5-Board: Schwierigkeits-Positionen FEST (BINGO_LAYOUT), nur die
+// konkreten Felder werden zufällig aus den Pools gezogen. Später Claude-swapbar.
 async function getBingoBoard() {
-  const cells = [];
-  BINGO_DISTRIBUTION.forEach(([diff, n]) => {
-    _pickN(BINGO_POOLS[diff], n).forEach(text => cells.push({ text, diff, owner: null }));
-  });
-  cells.sort(() => Math.random() - 0.5); // Platzierung mischen
-  return cells;
+  const counts = {};
+  BINGO_LAYOUT.forEach(d => counts[d] = (counts[d] || 0) + 1);
+  const picked = {};
+  Object.keys(counts).forEach(d => { picked[d] = _pickN(BINGO_POOLS[d], counts[d]); });
+  return BINGO_LAYOUT.map(d => ({ text: picked[d].pop(), diff: d, owner: null }));
 }
 
 // ================================================
@@ -2468,6 +2474,8 @@ function bingoLinesFor(teamIdx) {
 function teamHasBingo(teamIdx) { return bingoLinesFor(teamIdx).length > 0; }
 
 function renderBingoGame() {
+  if (state.bingo.board.length < 25) return; // Schutz: nur mit vollständigem Board rendern
+
   // Team-Chips (Auswahl, wer abhakt)
   document.getElementById('bingo-team-chips').innerHTML = state.bingo.teams.map((team, i) => {
     const activeCls = i === state.bingo.activeTeam ? 'active' : '';
@@ -2479,12 +2487,17 @@ function renderBingoGame() {
     </button>`;
   }).join('');
 
-  // Bingo-Hinweis (kein Auto-Ende)
+  // Bingo-Hinweis + direkter Sieger-Button (kein Auto-Ende)
   const banner = document.getElementById('bingo-banner');
   const winners = [0, 1].filter(teamHasBingo);
   if (winners.length) {
     banner.style.display = 'flex';
-    banner.innerHTML = winners.map(i => `🎉 Team ${i + 1} (${escapeHtml(teamLabel(i))}) hat Bingo!`).join('<br>');
+    banner.innerHTML = winners.map(i => `
+      <div class="bingo-win-row">
+        <span>🎉 Team ${i + 1} (${escapeHtml(teamLabel(i))}) hat Bingo!</span>
+        <button class="btn btn-sm" style="width:auto; background:${BINGO_TEAM_COLORS[i]}; color:#fff"
+          onclick="pickBingoWinner(${i})">🏆 +1 für beide</button>
+      </div>`).join('');
   } else {
     banner.style.display = 'none';
   }
