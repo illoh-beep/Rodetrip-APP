@@ -978,6 +978,45 @@
       gap: 10px; width: 100%;
     }
     .bingo-win-row + .bingo-win-row { margin-top: 6px; }
+
+    /* ================================================
+       WER BIN ICH?
+    ================================================ */
+    .whoami-name-btn {
+      justify-content: flex-start;
+      gap: 14px;
+      font-size: 1.3rem;
+      font-weight: 800;
+      background: var(--card);
+      min-height: 72px;
+    }
+    .whoami-reveal {
+      position: fixed;
+      inset: 0;
+      background: var(--accent);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px;
+      text-align: center;
+      z-index: 900;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .whoami-reveal .who-label { font-size: 1.1rem; color: rgba(255,255,255,0.85); font-weight: 600; }
+    .whoami-reveal .who-name {
+      font-size: 2.6rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.15;
+      word-break: break-word;
+    }
+    .whoami-reveal .who-hint {
+      position: absolute; bottom: 32px;
+      font-size: 0.9rem; color: rgba(255,255,255,0.8);
+    }
   </style>
 </head>
 <body>
@@ -1025,6 +1064,14 @@
       <div class="info">
         <h3>Bingo Karten Generator</h3>
         <p>Lock-out Bingo — Kennzeichen & Schilder</p>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="game-card" onclick="startWhoAmI()">
+      <div class="icon">🕵️</div>
+      <div class="info">
+        <h3>Wer bin ich?</h3>
+        <p>Errate deine geheime Identität</p>
       </div>
       <div class="arrow">›</div>
     </div>
@@ -1281,6 +1328,80 @@
 </div>
 
 <!-- ================================================
+     WER BIN ICH — SETUP (Modus wählen)
+================================================ -->
+<div id="screen-whoami-setup" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
+    <div>
+      <h2>🕵️ Wer bin ich?</h2>
+      <p style="font-size:0.85rem">Jeder errät seine geheime Identität</p>
+    </div>
+  </div>
+
+  <p style="margin-bottom:16px; font-size:0.9rem; color:var(--muted)">
+    Jeder bekommt eine geheime Person. Im Spiel tippt ihr auf die Namen, um die
+    Identität der anderen zu sehen (tippe nicht dich selbst!). Die ersten beiden,
+    die sich selbst erraten, bekommen je 1 Punkt.
+  </p>
+
+  <div class="stack gap-12" style="margin-top:auto">
+    <button class="btn btn-primary" onclick="chooseWhoAmIMode('manual')">✍️ Manuell eingeben</button>
+    <button class="btn btn-ghost" onclick="chooseWhoAmIMode('random')">🎲 Zufalls-Pool</button>
+  </div>
+</div>
+
+<!-- ================================================
+     WER BIN ICH — ENTRY (manuell, reihum)
+================================================ -->
+<div id="screen-whoami-entry" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('whoami-setup')">‹</button>
+    <div><h2>✍️ Identitäten</h2></div>
+  </div>
+
+  <div id="whoami-entry-area" class="stack gap-12" style="flex:1; justify-content:center"></div>
+</div>
+
+<!-- ================================================
+     WER BIN ICH — PLAY (4 Namens-Buttons)
+================================================ -->
+<div id="screen-whoami-play" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
+    <div>
+      <h2>🕵️ Wer bin ich?</h2>
+      <p style="font-size:0.85rem">Tippe einen Namen → seine Identität (nicht dich selbst!)</p>
+    </div>
+  </div>
+
+  <div id="whoami-name-buttons" class="stack gap-12"></div>
+
+  <div id="whoami-reveal" class="whoami-reveal" style="display:none" onclick="hideIdentity()"></div>
+
+  <div style="margin-top:auto; padding-top:16px">
+    <button class="btn btn-primary" onclick="whoAmIStartScoring()">🏁 Punkte vergeben</button>
+  </div>
+</div>
+
+<!-- ================================================
+     WER BIN ICH — RESULT (Punkte)
+================================================ -->
+<div id="screen-whoami-result" class="screen">
+  <div class="screen-header">
+    <div><h2 id="whoami-result-title">🏁 Wer hat zuerst erraten?</h2></div>
+  </div>
+
+  <div id="whoami-result-info" class="muted" style="font-size:0.9rem; margin-bottom:12px"></div>
+  <div id="whoami-result-buttons" class="stack gap-12"></div>
+
+  <div class="stack gap-8" style="margin-top:auto; padding-top:16px">
+    <button class="btn btn-ghost" onclick="startWhoAmI()">🔄 Nochmal</button>
+    <button class="btn btn-ghost" onclick="showScreen('home')">🏠 Zum Menü</button>
+  </div>
+</div>
+
+<!-- ================================================
      SCOREBOARD
 ================================================ -->
 <div id="screen-scoreboard" class="screen">
@@ -1413,6 +1534,23 @@ async function getBingoBoard() {
   return BINGO_LAYOUT.map(d => ({ text: picked[d].pop(), diff: d, owner: null }));
 }
 
+// ── WER BIN ICH: Namens-Pool (Starter — durch .txt des Nutzers ersetzbar) ──
+// KI-Swap-Punkt wie getKmEvent/getBingoBoard.
+const WHO_AM_I_POOL = [
+  'Albert Einstein', 'Lady Gaga', 'Cristiano Ronaldo', 'Harry Potter', 'Spongebob',
+  'Barack Obama', 'Beyoncé', 'Lionel Messi', 'Mickey Mouse', 'Shrek',
+  'Angela Merkel', 'Taylor Swift', 'Michael Jackson', 'Darth Vader', 'Homer Simpson',
+  'Elon Musk', 'Rihanna', 'Roger Federer', 'Batman', 'Super Mario',
+  'Queen Elizabeth II', 'Adele', 'Usain Bolt', 'James Bond', 'Pikachu',
+  'Donald Trump', 'Madonna', 'Sebastian Vettel', 'Spider-Man', 'Yoda',
+  'Greta Thunberg', 'Ed Sheeran', 'Dwayne Johnson', 'Sherlock Holmes', 'Bibi Blocksberg',
+  'Helene Fischer', 'Kanye West', 'Manuel Neuer', 'Joker', 'Bart Simpson',
+];
+
+async function getWhoAmINames(n) {
+  return _pickN(WHO_AM_I_POOL, n); // n verschiedene Zufallsnamen
+}
+
 // ================================================
 // 2. STATE
 // ================================================
@@ -1449,6 +1587,14 @@ const state = {
     board: [],             // 25 Felder: { text, diff, owner: null|0|1 }
     activeTeam: 0,         // welches Team gerade abhakt
     winnerTeam: null,
+  },
+
+  whoAmI: {
+    mode: null,            // 'manual' | 'random'
+    assignments: {},       // { Gulli:'…', Feli:'…', Nico:'…', Anna:'…' }
+    entryIndex: 0,         // Fortschritt beim manuellen Eingeben
+    revealed: null,        // welcher Spieler gerade angezeigt wird
+    firstGuesser: null,    // 1. Rater (für 2.-Auswahl)
   },
 };
 
@@ -2552,6 +2698,147 @@ function pickBingoWinner(teamIdx) {
   const sorted = PLAYERS.map(p => ({ p, pts: state.scores[p] || 0 })).sort((a, b) => b.pts - a.pts);
   const medals = ['🥇', '🥈', '🥉', '4.'];
   document.getElementById('bingo-winner-buttons').innerHTML = `
+    <div class="card" style="padding:12px">
+      <div style="font-size:0.8rem; color:var(--muted); font-weight:600; margin-bottom:8px">AKTUELLER STAND</div>
+      ${sorted.map((s, i) => `
+        <div style="display:flex; align-items:center; gap:10px; padding:6px 0">
+          <span style="width:28px; text-align:center">${medals[i] || (i+1)+'.'}</span>
+          <span style="flex:1; font-weight:700">${escapeHtml(s.p)}</span>
+          <span style="font-weight:900; color:var(--accent); font-size:1.2rem">${s.pts}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ================================================
+// 12c. WER BIN ICH?
+// ================================================
+function startWhoAmI() {
+  state.whoAmI = { mode: null, assignments: {}, entryIndex: 0, revealed: null, firstGuesser: null };
+  showScreen('whoami-setup');
+}
+
+async function chooseWhoAmIMode(mode) {
+  state.whoAmI.mode = mode;
+  if (mode === 'random') {
+    const names = await getWhoAmINames(PLAYERS.length);
+    PLAYERS.forEach((p, i) => { state.whoAmI.assignments[p] = names[i] || '???'; });
+    renderWhoAmIPlay();
+    showScreen('whoami-play');
+  } else {
+    state.whoAmI.entryIndex = 0;
+    state.whoAmI.assignments = {};
+    renderWhoAmIEntry();
+    showScreen('whoami-entry');
+  }
+}
+
+// Reihum: Spieler i tippt die Identität für Spieler (i+1)%n
+function renderWhoAmIEntry() {
+  const n = PLAYERS.length;
+  const i = state.whoAmI.entryIndex;
+  const enterer = PLAYERS[i];
+  const target  = PLAYERS[(i + 1) % n];
+  const area = document.getElementById('whoami-entry-area');
+  area.innerHTML = `
+    <div class="card center" style="display:flex; flex-direction:column; gap:14px; align-items:center">
+      <div style="font-size:2.2rem">✍️</div>
+      <p style="font-size:0.9rem; color:var(--muted)">Handy an <b style="color:var(--text)">${escapeHtml(enterer)}</b> geben</p>
+      <p style="font-size:1.05rem"><b>${escapeHtml(enterer)}</b>, gib die Identität für<br>
+        <b style="color:var(--accent2); font-size:1.3rem">${escapeHtml(target)}</b> ein:</p>
+      <input id="whoami-entry-input" class="pl-input" placeholder="z. B. Albert Einstein"
+        autocomplete="off" autocapitalize="words">
+      <button class="btn btn-primary" onclick="whoAmIEntryNext()">
+        ${i < n - 1 ? 'Weiter →' : '✓ Fertig — los geht\'s'}
+      </button>
+      <p class="muted" style="font-size:0.8rem">${i + 1} / ${n}</p>
+    </div>`;
+  setTimeout(() => { const el = document.getElementById('whoami-entry-input'); if (el) el.focus(); }, 50);
+}
+
+function whoAmIEntryNext() {
+  const n = PLAYERS.length;
+  const i = state.whoAmI.entryIndex;
+  const target = PLAYERS[(i + 1) % n];
+  const val = (document.getElementById('whoami-entry-input').value || '').trim();
+  if (!val) { showToast('Bitte eine Identität eingeben'); return; }
+  state.whoAmI.assignments[target] = val;
+  if (i < n - 1) {
+    state.whoAmI.entryIndex = i + 1;
+    renderWhoAmIEntry();
+  } else {
+    renderWhoAmIPlay();
+    showScreen('whoami-play');
+  }
+}
+
+function renderWhoAmIPlay() {
+  document.getElementById('whoami-name-buttons').innerHTML = PLAYERS.map(p => `
+    <button class="btn whoami-name-btn" onclick="revealIdentity('${p}')">
+      <span style="font-size:1.4rem">🕵️</span> ${escapeHtml(p)}
+    </button>
+  `).join('');
+  hideIdentity();
+}
+
+function revealIdentity(player) {
+  state.whoAmI.revealed = player;
+  const el = document.getElementById('whoami-reveal');
+  el.innerHTML = `
+    <div class="who-label">${escapeHtml(player)} ist…</div>
+    <div class="who-name">${escapeHtml(state.whoAmI.assignments[player] || '???')}</div>
+    <div class="who-hint">Tippen zum Schließen</div>`;
+  el.style.display = 'flex';
+}
+
+function hideIdentity() {
+  state.whoAmI.revealed = null;
+  const el = document.getElementById('whoami-reveal');
+  if (el) el.style.display = 'none';
+}
+
+function whoAmIStartScoring() {
+  state.whoAmI.firstGuesser = null;
+  renderWhoAmIScoring();
+  showScreen('whoami-result');
+}
+
+function renderWhoAmIScoring() {
+  const first = state.whoAmI.firstGuesser;
+  document.getElementById('whoami-result-title').textContent =
+    first === null ? '🏁 Wer hat ZUERST erraten?' : '🥈 Wer als ZWEITER?';
+  document.getElementById('whoami-result-info').textContent =
+    first === null ? 'Tippe den ersten Spieler, der sich selbst erraten hat.'
+                   : `1. war ${first}. Jetzt der zweite (oder „niemand mehr").`;
+
+  const avail = PLAYERS.filter(p => p !== first);
+  document.getElementById('whoami-result-buttons').innerHTML =
+    avail.map(p => `<button class="btn btn-primary" onclick="pickGuesser('${p}')">${escapeHtml(p)}</button>`).join('') +
+    `<button class="btn btn-ghost" onclick="pickGuesser(null)">— niemand (mehr) —</button>`;
+}
+
+function pickGuesser(player) {
+  if (state.whoAmI.firstGuesser === null) {
+    // 1. Rater
+    if (player) addPoint(player, 1);
+    state.whoAmI.firstGuesser = player;
+    if (player === null) { showWhoAmIStandings('Niemand hat erraten.'); return; } // beide übersprungen
+    renderWhoAmIScoring();
+  } else {
+    // 2. Rater
+    if (player) addPoint(player, 1);
+    const msg = player
+      ? `🥇 ${state.whoAmI.firstGuesser} (+1) · 🥈 ${player} (+1)`
+      : `🥇 ${state.whoAmI.firstGuesser} (+1) — sonst niemand.`;
+    showWhoAmIStandings(msg);
+  }
+}
+
+function showWhoAmIStandings(headline) {
+  document.getElementById('whoami-result-title').textContent = '🎉 Ergebnis';
+  document.getElementById('whoami-result-info').innerHTML = `<b>${escapeHtml(headline)}</b>`;
+  const sorted = PLAYERS.map(p => ({ p, pts: state.scores[p] || 0 })).sort((a, b) => b.pts - a.pts);
+  const medals = ['🥇', '🥈', '🥉', '4.'];
+  document.getElementById('whoami-result-buttons').innerHTML = `
     <div class="card" style="padding:12px">
       <div style="font-size:0.8rem; color:var(--muted); font-weight:600; margin-bottom:8px">AKTUELLER STAND</div>
       ${sorted.map((s, i) => `

@@ -85,8 +85,18 @@ auf **einem iPhone im Safari-Browser** spielen. Gehostet über **GitHub Pages**.
   → **beide Team-Mitglieder +1**.
 - Screens: `#screen-bingo-setup`, `#screen-bingo-game`, `#screen-bingo-result`.
 
+## Spiel 4: Wer bin ich?
+- Jeder bekommt eine geheime Identität (kennt seine eigene nicht). Play-Screen mit
+  **4 Namens-Buttons** → Tippen zeigt die Identität dieses Spielers im Vollbild
+  (`revealIdentity()`/`hideIdentity()`); vertrauensbasiert (eigenes nicht tippen).
+- **2 Modi** (`chooseWhoAmIMode`): **manuell** — Handy reihum, Spieler i tippt die
+  Identität für Spieler (i+1) (`renderWhoAmIEntry`/`whoAmIEntryNext`); **random** — aus
+  `WHO_AM_I_POOL` ziehen (`getWhoAmINames()` ← KI-Swap-Punkt; Starter-Liste, per .txt ersetzbar).
+- **Punkte**: die ersten beiden, die sich selbst erraten, je **+1** (`whoAmIStartScoring`
+  → `pickGuesser` 1./2. → Stand inline). Screens: `#screen-whoami-setup/-entry/-play/-result`.
+
 ## Geplante Erweiterung
-Es kommen **4 weitere Spiele** dazu. Architektur ist darauf ausgelegt (Spiel-Kacheln auf Home,
+Es kommen **3 weitere Spiele** dazu. Architektur ist darauf ausgelegt (Spiel-Kacheln auf Home,
 Screens nach Muster ergänzen). `getKmEvent()` zeigt das Muster für späteren **Claude-AI-Swap**
 (hardcodiert jetzt → später `fetch` zur Anthropic-API, nur die eine Funktion tauschen).
 
