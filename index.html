@@ -1477,31 +1477,38 @@ async function getKmEvent() {
 
 // ── BINGO: Item-Pools nach Schwierigkeit (KI-Swap-Punkt wie getKmEvent) ──
 const BINGO_POOLS = {
+  // sehr einfach – häufige 2er-Muster
   veryEasy: [
-    'Buchstabe A', 'Buchstabe E', 'Buchstabe M', 'Buchstabe N',
-    'Ziffer 0', 'Ziffer 1', 'Ziffer 2', 'Ziffer 3',
-    'Blaues EU-Feld (Sterne)', 'Tempolimit-Schild',
+    'Doppel-Ziffer (z. B. 44, 88)', 'Doppel-Buchstabe (z. B. SS, TT)',
+    'Zahl endet auf 0 (2-stellig, z. B. 80)', 'Zahl „10"', 'Zahl „20"', 'Zahl „11"',
+    'Buchstaben „AB"', 'Buchstaben „SK"', 'Tempolimit-Schild (Zahl)',
+    'Zwei aufeinanderfolgende Ziffern (z. B. 23, 67)',
   ],
+  // einfach – konkrete, gängige Kombis
   easy: [
-    'Buchstabe K', 'Buchstabe S', 'Buchstabe L', 'Buchstabe R', 'Buchstabe G',
-    'Eine 7', 'Gelbes Ortsschild', 'Autobahn-Nr. (z. B. A 7)',
-    'Nur 1 Buchstabe vorne (Großstadt)', 'Zweistellige Tempo-Zahl',
+    'Zahl „12"', 'Zahl „21"', 'Zahl „66"', 'Zahl „07"',
+    'Buchstaben „GT"', 'Buchstaben „MS"', 'Buchstaben „LK"',
+    'Autobahn-Schild „A" + Zahl (z. B. A7)', 'Ausländisches Kennzeichen (NL/A/CH)',
+    'Zahl endet auf 5 (2-stellig, z. B. 25)',
   ],
+  // normal – speziellere Kombis
   normal: [
-    'Buchstabe Z', 'Buchstabe W', 'Buchstabe J', 'Buchstabe V',
-    'Zahl über 800', 'Ausländisches Kennzeichen (NL/A/CH)',
-    'Entfernungsschild „Stadt + km“', 'Doppelziffer (88, 99)',
-    '3 Buchstaben in der Mitte', 'Bundesstraße „B …“',
+    'Buchstaben „HF"', 'Buchstaben „NK"', 'Buchstaben „VW"', 'Buchstaben „RB"',
+    'Zahl „88"', 'Zahl „42"', 'Zahl „69"', 'Zahl über 800 (z. B. 912)',
+    'Spiegelzahl 3-stellig (z. B. 121, 343)', 'Kennzeichen aus F, I oder E',
   ],
+  // schwer – seltene Buchstaben/Muster
   hard: [
-    'Buchstabe Q', 'Buchstabe Y', 'Buchstabe X',
-    'Spiegelzahl/Palindrom (121, 343)', 'Kennzeichen F / I / E',
-    'Drei gleiche Ziffern (555)', 'Initialen eines Mitfahrers',
+    'Buchstaben mit Q (z. B. QU, QX)', 'Buchstaben mit X (z. B. XL, AX)',
+    'Buchstaben mit Y (z. B. YN, TY)', 'Drei gleiche Ziffern (z. B. 555)',
+    'Palindrom-Zahl 4-stellig (z. B. 1221)', 'Kennzeichen aus PL, CZ oder HR',
+    'Zahl „13" + Doppel-Buchstabe',
   ],
+  // sehr schwer – Jackpot
   veryHard: [
-    'Buchstaben ergeben ein Wort (OMA, LOL)',
-    'Vier gleiche Ziffern (7777)',
-    'Kennzeichen von weit weg (PL, GR)',
+    'Buchstaben ergeben ein Wort (z. B. OMA, LOL, BUS)',
+    'Vier gleiche Ziffern (z. B. 7777)',
+    'Kennzeichen aus sehr fernem Land (z. B. GR, BG, FIN)',
   ],
 };
 

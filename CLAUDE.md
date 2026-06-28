@@ -77,6 +77,8 @@ auf **einem iPhone im Safari-Browser** spielen. Gehostet über **GitHub Pages**.
 - **Ein gemeinsames 5×5-Board** für 2 zufällig ausgeloste Zweier-Teams (`drawBingoTeams()`).
   Felder = Dinge auf Kennzeichen/Schildern, feste Verteilung **6/6/8/4/1** aus `BINGO_POOLS`
   (`getBingoBoard()` ← KI-Swap-Punkt, baut+mischt die 25 Felder).
+  **Mindestens 2 Zeichen pro Feld** (z. B. „HF", „92") — keine Einzelbuchstaben/-ziffern
+  (sonst Streit, wer es zuerst gesehen hat).
 - **Lock-out**: `claimCell()` — freies Feld → aktives Team (gesperrt, Teamfarbe); eigenes
   Feld nochmal = freigeben (Verklick-Korrektur); gegnerisches = gesperrt (Toast).
   Aktives Team über die Team-Chips (`setActiveTeam()`).
