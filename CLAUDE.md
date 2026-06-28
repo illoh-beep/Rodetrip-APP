@@ -97,8 +97,16 @@ auf **einem iPhone im Safari-Browser** spielen. Gehostet über **GitHub Pages**.
 - **Punkte**: die ersten beiden, die sich selbst erraten, je **+1** (`whoAmIStartScoring`
   → `pickGuesser` 1./2. → Stand inline). Screens: `#screen-whoami-setup/-entry/-play/-result`.
 
+## Spiel 5: Kennzeichen Mathe
+- App gibt eine **Zielzahl 1–100** vor (`getKennzeichenTarget()` ← KI-Swap-Punkt).
+  Man tippt die **Ziffern eines Kennzeichens** + einen **Rechenweg** (`+ - * /`, Klammern).
+- **Cheat-sicher**: `kzCheck()` prüft (a) es werden **genau** die Kennzeichen-Ziffern benutzt
+  (Multiset-Abgleich) und (b) das Ergebnis = Zielzahl. Auswertung über `kzSafeEval()`
+  (eigener Shunting-Yard-Parser, **kein eval()**; unäres Minus unterstützt).
+- Richtig → Löser wählen → **+1**, dann neue Zahl. Screen: `#screen-kzmath`.
+
 ## Geplante Erweiterung
-Es kommen **3 weitere Spiele** dazu. Architektur ist darauf ausgelegt (Spiel-Kacheln auf Home,
+Es kommen **2 weitere Spiele** dazu. Architektur ist darauf ausgelegt (Spiel-Kacheln auf Home,
 Screens nach Muster ergänzen). `getKmEvent()` zeigt das Muster für späteren **Claude-AI-Swap**
 (hardcodiert jetzt → später `fetch` zur Anthropic-API, nur die eine Funktion tauschen).
 

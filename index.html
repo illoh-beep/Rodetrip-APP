@@ -1017,6 +1017,33 @@
       position: absolute; bottom: 32px;
       font-size: 0.9rem; color: rgba(255,255,255,0.8);
     }
+
+    /* ================================================
+       KENNZEICHEN MATHE
+    ================================================ */
+    .kz-target-card {
+      background: linear-gradient(135deg, #1e1e40, #2a2050);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .kz-target-card .kz-label { font-size: 0.8rem; color: var(--muted); font-weight: 700; letter-spacing: 0.08em; }
+    .kz-target-card .kz-target {
+      font-size: 4rem; font-weight: 900; color: var(--accent);
+      line-height: 1.1; font-variant-numeric: tabular-nums;
+    }
+    .kz-field-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+    .kz-feedback {
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+    .kz-feedback.ok  { background: rgba(45, 198, 83, 0.15);  border: 1px solid var(--success); color: var(--text); }
+    .kz-feedback.err { background: rgba(230, 57, 70, 0.12);  border: 1px solid var(--danger);  color: var(--text); }
   </style>
 </head>
 <body>
@@ -1072,6 +1099,14 @@
       <div class="info">
         <h3>Wer bin ich?</h3>
         <p>Errate deine geheime Identität</p>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="game-card" onclick="startKzMath()">
+      <div class="icon">🔢</div>
+      <div class="info">
+        <h3>Kennzeichen Mathe</h3>
+        <p>Zielzahl aus Kennzeichen-Ziffern errechnen</p>
       </div>
       <div class="arrow">›</div>
     </div>
@@ -1402,6 +1437,45 @@
 </div>
 
 <!-- ================================================
+     KENNZEICHEN MATHE
+================================================ -->
+<div id="screen-kzmath" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
+    <div>
+      <h2>🔢 Kennzeichen Mathe</h2>
+      <p style="font-size:0.85rem">Erreiche die Zielzahl mit den Ziffern eines Kennzeichens</p>
+    </div>
+  </div>
+
+  <div class="kz-target-card">
+    <div class="kz-label">ZIELZAHL</div>
+    <div class="kz-target" id="kz-target">–</div>
+  </div>
+
+  <div class="card" style="display:flex; flex-direction:column; gap:12px">
+    <div>
+      <label class="kz-field-label">Kennzeichen-Ziffern</label>
+      <input id="kz-plate" class="pl-input" inputmode="numeric" placeholder="z. B. 1234"
+        oninput="kzClearFeedback()">
+    </div>
+    <div>
+      <label class="kz-field-label">Rechenweg <span class="muted">( + − ∗ /  ·  Klammern erlaubt )</span></label>
+      <input id="kz-expr" class="pl-input" inputmode="text" placeholder="z. B. 6*7  oder  (1+2)*14"
+        autocapitalize="off" autocomplete="off" oninput="kzClearFeedback()">
+    </div>
+    <button class="btn btn-primary" onclick="kzCheck()">✓ Prüfen</button>
+    <div id="kz-feedback" class="kz-feedback" style="display:none"></div>
+  </div>
+
+  <div id="kz-solver" class="stack gap-8" style="display:none; margin-top:12px"></div>
+
+  <div style="margin-top:auto; padding-top:16px">
+    <button class="btn btn-ghost" onclick="newKzTarget()">🎲 Neue Zahl</button>
+  </div>
+</div>
+
+<!-- ================================================
      SCOREBOARD
 ================================================ -->
 <div id="screen-scoreboard" class="screen">
@@ -1688,6 +1762,13 @@ async function getWhoAmINames(n) {
   return _pickN(WHO_AM_I_POOL, n); // n verschiedene Zufallsnamen
 }
 
+// ── KENNZEICHEN MATHE: Zielzahl (KI-Swap-Punkt) ──
+const KZ_MATH_RANGE = [1, 100];
+async function getKennzeichenTarget() {
+  const [lo, hi] = KZ_MATH_RANGE;
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
+
 // ================================================
 // 2. STATE
 // ================================================
@@ -1732,6 +1813,10 @@ const state = {
     entryIndex: 0,         // Fortschritt beim manuellen Eingeben
     revealed: null,        // welcher Spieler gerade angezeigt wird
     firstGuesser: null,    // 1. Rater (für 2.-Auswahl)
+  },
+
+  kzMath: {
+    target: null,          // aktuelle Zielzahl
   },
 };
 
@@ -2985,6 +3070,111 @@ function showWhoAmIStandings(headline) {
           <span style="font-weight:900; color:var(--accent); font-size:1.2rem">${s.pts}</span>
         </div>`).join('')}
     </div>`;
+}
+
+// ================================================
+// 12d. KENNZEICHEN MATHE
+// ================================================
+async function startKzMath() {
+  await newKzTarget();
+  showScreen('kzmath');
+}
+
+async function newKzTarget() {
+  state.kzMath.target = await getKennzeichenTarget();
+  document.getElementById('kz-target').textContent = state.kzMath.target;
+  const plate = document.getElementById('kz-plate'); if (plate) plate.value = '';
+  const expr  = document.getElementById('kz-expr');  if (expr)  expr.value = '';
+  kzClearFeedback();
+  document.getElementById('kz-solver').style.display = 'none';
+}
+
+function kzClearFeedback() {
+  const fb = document.getElementById('kz-feedback');
+  if (fb) fb.style.display = 'none';
+}
+
+function kzFeedback(ok, msg) {
+  const fb = document.getElementById('kz-feedback');
+  fb.className = 'kz-feedback ' + (ok ? 'ok' : 'err');
+  fb.innerHTML = msg;
+  fb.style.display = 'block';
+}
+
+// Sicherer Rechen-Parser (+ - * /, Klammern, unäres Minus) — KEIN eval()
+function kzSafeEval(expr) {
+  const tokens = expr.match(/\d+(?:\.\d+)?|[+\-*/()]/g);
+  if (!tokens) throw new Error('leer');
+  const out = [], ops = [], prec = { '+': 1, '-': 1, '*': 2, '/': 2 };
+  let prev = null; // null|'num'|'op'|'('|')'
+  for (const t of tokens) {
+    if (/^\d/.test(t)) { out.push(parseFloat(t)); prev = 'num'; }
+    else if (t === '(') { ops.push(t); prev = '('; }
+    else if (t === ')') {
+      while (ops.length && ops[ops.length - 1] !== '(') out.push(ops.pop());
+      if (!ops.length) throw new Error('Klammer-Fehler');
+      ops.pop(); prev = ')';
+    } else {
+      if (t === '-' && (prev === null || prev === 'op' || prev === '(')) out.push(0); // unäres Minus
+      while (ops.length && ops[ops.length - 1] !== '(' && prec[ops[ops.length - 1]] >= prec[t]) out.push(ops.pop());
+      ops.push(t); prev = 'op';
+    }
+  }
+  while (ops.length) { const o = ops.pop(); if (o === '(') throw new Error('Klammer-Fehler'); out.push(o); }
+  const st = [];
+  for (const x of out) {
+    if (typeof x === 'number') { st.push(x); continue; }
+    const b = st.pop(), a = st.pop();
+    if (a === undefined || b === undefined) throw new Error('ungültige Rechnung');
+    st.push(x === '+' ? a + b : x === '-' ? a - b : x === '*' ? a * b : a / b);
+  }
+  if (st.length !== 1) throw new Error('ungültige Rechnung');
+  return st[0];
+}
+
+function kzCheck() {
+  const target = state.kzMath.target;
+  const plateRaw = document.getElementById('kz-plate').value || '';
+  const expr     = (document.getElementById('kz-expr').value || '').trim();
+
+  const plateDigits = (plateRaw.match(/\d/g) || []);
+  if (plateDigits.length < 1) { kzFeedback(false, 'Bitte die Kennzeichen-Ziffern eingeben (z. B. 1234).'); return; }
+  if (!expr) { kzFeedback(false, 'Bitte einen Rechenweg eingeben.'); return; }
+  if (!/^[\d+\-*/().\s]+$/.test(expr)) { kzFeedback(false, 'Nur Ziffern und + − ∗ / ( ) erlaubt.'); return; }
+
+  // Ziffern-Abgleich: es müssen GENAU die Kennzeichen-Ziffern verwendet werden
+  const exprDigits = (expr.match(/\d/g) || []);
+  const sortNum = a => a.slice().sort((x, y) => x - y).join(',');
+  if (sortNum(exprDigits) !== sortNum(plateDigits)) {
+    kzFeedback(false, `Du musst genau die Ziffern <b>${plateDigits.join(' ')}</b> verwenden — jede einmal.`);
+    return;
+  }
+
+  let res;
+  try { res = kzSafeEval(expr); }
+  catch (e) { kzFeedback(false, 'Rechnung ungültig (' + e.message + ').'); return; }
+
+  if (Math.abs(res - target) < 1e-9) {
+    kzFeedback(true, `✅ Richtig! ${escapeHtml(expr)} = ${target}`);
+    showKzSolver();
+  } else {
+    const shown = Number.isInteger(res) ? res : Math.round(res * 100) / 100;
+    kzFeedback(false, `❌ Ergibt <b>${shown}</b>, nicht <b>${target}</b>.`);
+  }
+}
+
+function showKzSolver() {
+  const el = document.getElementById('kz-solver');
+  el.innerHTML = `
+    <div class="muted center" style="font-size:0.9rem">Wer hat's gelöst? → +1</div>
+    ${PLAYERS.map(p => `<button class="btn btn-primary" onclick="kzPickSolver('${p}')">${escapeHtml(p)}</button>`).join('')}`;
+  el.style.display = 'flex';
+}
+
+function kzPickSolver(player) {
+  addPoint(player, 1);
+  showToast(`${player} +1 — neue Zahl!`);
+  newKzTarget();
 }
 
 // ================================================
