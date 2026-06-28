@@ -105,8 +105,21 @@ auf **einem iPhone im Safari-Browser** spielen. Gehostet über **GitHub Pages**.
   (eigener Shunting-Yard-Parser, **kein eval()**; unäres Minus unterstützt).
 - Richtig → Löser wählen → **+1**, dann neue Zahl. Screen: `#screen-kzmath`.
 
+## Spiel 6: Reise Parlament
+- App schlägt **4 zufällige absurde Gesetze** vor (`getParlamentVorschlaege()` ←
+  KI-Swap-Punkt; Pool `PARLAMENT_GESETZE`, je `{text, dauerMinuten}`, ≥45 Einträge).
+- Gruppe einigt sich auf EINS (antippen) → **finale Abstimmung** (10-Sek-Timer,
+  pro Spieler Ja/Nein). Mehrheit entscheidet, **Gleichstand = nicht in Kraft**.
+- Angenommene Gesetze → `localStorage` (`LAWS_KEY='aktive_gesetze'`, je
+  `{text, startTime, durationMinutes}`), laufen nach Zeit automatisch ab (`pruneLaws`).
+- **App-weites Banner** (`#law-banner`, fix oben) zeigt aktive Gesetze + Countdown auf
+  JEDEM Screen; `startParlamentTick()` (setInterval 1s) aktualisiert/entfernt; in `init`
+  gestartet. `body.has-laws` schiebt Screens nach unten.
+- Screens: `#screen-parlament` (+ `-select/-vote/-result`). Funktionen: `startParlament`,
+  `parlamentPropose`, `parlamentChoose`, `parlamentVote`, `parlamentEvaluate`, `renderLawBanner`.
+
 ## Geplante Erweiterung
-Es kommen **2 weitere Spiele** dazu. Architektur ist darauf ausgelegt (Spiel-Kacheln auf Home,
+Es kommt **1 weiteres Spiel** dazu. Architektur ist darauf ausgelegt (Spiel-Kacheln auf Home,
 Screens nach Muster ergänzen). `getKmEvent()` zeigt das Muster für späteren **Claude-AI-Swap**
 (hardcodiert jetzt → später `fetch` zur Anthropic-API, nur die eine Funktion tauschen).
 

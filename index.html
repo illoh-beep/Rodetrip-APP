@@ -1044,9 +1044,109 @@
     }
     .kz-feedback.ok  { background: rgba(45, 198, 83, 0.15);  border: 1px solid var(--success); color: var(--text); }
     .kz-feedback.err { background: rgba(230, 57, 70, 0.12);  border: 1px solid var(--danger);  color: var(--text); }
+
+    /* ================================================
+       REISE PARLAMENT
+    ================================================ */
+    /* App-weites Banner */
+    #law-banner {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: linear-gradient(135deg, #2a2050, #1e1e40);
+      border-bottom: 2px solid var(--success);
+      font-size: 0.85rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #law-banner .lb-icon { font-size: 1.1rem; flex-shrink: 0; }
+    #law-banner .lb-text { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #law-banner .lb-time { flex-shrink: 0; font-weight: 800; color: var(--success); font-variant-numeric: tabular-nums; }
+    body.has-laws .screen { padding-top: 52px; }   /* Platz fürs fixe Banner */
+
+    /* Aktive Gesetze (Liste) */
+    .law-active {
+      background: var(--card);
+      border-left: 4px solid var(--success);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .law-active-text { font-weight: 700; font-size: 0.95rem; }
+    .law-active-time { font-size: 0.85rem; color: var(--success); font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+    /* Auswahl-Karten (Stimmkarten) */
+    .law-choice {
+      background: var(--card);
+      border: 2px solid var(--card2);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      transition: transform 0.1s, border-color 0.15s;
+    }
+    .law-choice:active { transform: scale(0.98); border-color: var(--accent); }
+    .law-choice-text { font-weight: 700; font-size: 1.05rem; line-height: 1.3; }
+    .law-choice-dur  { font-size: 0.85rem; color: var(--accent2); font-weight: 700; margin-top: 8px; }
+
+    /* Abstimmung */
+    .vote-law-card {
+      background: linear-gradient(135deg, #1e1e40, #2a2050);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .vote-law-text { font-size: 1.2rem; font-weight: 800; line-height: 1.3; }
+    .vote-law-dur  { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+    .vote-timer {
+      text-align: center;
+      font-size: 2.6rem;
+      font-weight: 900;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 12px;
+    }
+    .vote-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px 8px 14px;
+    }
+    .vote-row .vote-name { flex: 1; font-weight: 700; min-width: 0; }
+    .vote-btn {
+      width: auto;
+      min-height: 48px;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      font-weight: 800;
+      background: var(--card2);
+      color: var(--text);
+      opacity: 0.85;
+    }
+    .vote-btn.ja.sel   { background: var(--success); color: #fff; opacity: 1; }
+    .vote-btn.nein.sel { background: var(--danger);  color: #fff; opacity: 1; }
+
+    /* Ergebnis-Animationen */
+    @keyframes flashOk   { 0% { background: rgba(45,198,83,0.35); } 100% { background: transparent; } }
+    @keyframes flashFail { 0% { background: rgba(230,57,70,0.35); } 100% { background: transparent; } }
+    .flash-ok   { animation: flashOk 0.6s ease; }
+    .flash-fail { animation: flashFail 0.6s ease; }
   </style>
 </head>
 <body>
+
+<!-- App-weites Banner für aktive Gesetze (Reise Parlament) -->
+<div id="law-banner" onclick="startParlament()" style="display:none"></div>
 
 <!-- ================================================
      HOME
@@ -1107,6 +1207,14 @@
       <div class="info">
         <h3>Kennzeichen Mathe</h3>
         <p>Zielzahl aus Kennzeichen-Ziffern errechnen</p>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="game-card" onclick="startParlament()">
+      <div class="icon">⚖️</div>
+      <div class="info">
+        <h3>Reise Parlament</h3>
+        <p>Absurde Gesetze beschließen & befolgen</p>
       </div>
       <div class="arrow">›</div>
     </div>
@@ -1476,6 +1584,66 @@
 </div>
 
 <!-- ================================================
+     REISE PARLAMENT — HOME
+================================================ -->
+<div id="screen-parlament" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('home')">‹</button>
+    <div>
+      <h2>⚖️ Reise Parlament</h2>
+      <p style="font-size:0.85rem">Beschließt absurde Gesetze für die Fahrt</p>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="parlamentPropose()">🔨 Neue Gesetze vorschlagen</button>
+
+  <h3 style="margin:20px 0 10px; color:var(--muted); font-size:0.85rem; letter-spacing:0.05em">AKTIVE GESETZE</h3>
+  <div id="parlament-active" class="stack gap-8" style="flex:1; overflow-y:auto; align-content:start"></div>
+</div>
+
+<!-- REISE PARLAMENT — AUSWAHL (4 Gesetze) -->
+<div id="screen-parlament-select" class="screen">
+  <div class="screen-header">
+    <button class="btn btn-ghost back-btn" onclick="showScreen('parlament')">‹</button>
+    <div>
+      <h2>🗳️ Gesetzesvorschläge</h2>
+      <p style="font-size:0.85rem">Einigt euch auf EINS — antippen</p>
+    </div>
+  </div>
+
+  <div id="parlament-proposals" class="stack gap-12" style="flex:1; overflow-y:auto; align-content:start"></div>
+
+  <div style="margin-top:16px">
+    <button class="btn btn-ghost" onclick="parlamentPropose()">🔄 Neue 4 vorschlagen</button>
+  </div>
+</div>
+
+<!-- REISE PARLAMENT — ABSTIMMUNG -->
+<div id="screen-parlament-vote" class="screen">
+  <div class="screen-header" style="margin-bottom:8px">
+    <button class="btn btn-ghost back-btn" onclick="parlamentCancelVote()">‹</button>
+    <div><h2>🗳️ Abstimmung</h2></div>
+  </div>
+
+  <div class="vote-law-card" id="parlament-vote-law"></div>
+  <div class="vote-timer" id="parlament-vote-timer">10</div>
+
+  <div id="parlament-vote-rows" class="stack gap-8" style="flex:1; align-content:start"></div>
+</div>
+
+<!-- REISE PARLAMENT — ERGEBNIS -->
+<div id="screen-parlament-result" class="screen" style="align-items:center; justify-content:center; text-align:center; gap:20px">
+  <div id="parlament-result-emoji" style="font-size:5rem"></div>
+  <h2 id="parlament-result-title"></h2>
+  <div class="vote-law-card" id="parlament-result-law" style="width:100%"></div>
+  <div id="parlament-result-detail" class="muted" style="font-size:0.9rem"></div>
+  <div class="stack gap-8" style="width:100%; margin-top:8px">
+    <button class="btn btn-primary" id="parlament-result-primary"></button>
+    <button class="btn btn-ghost" onclick="showScreen('parlament')">🏛️ Zum Parlament</button>
+  </div>
+</div>
+
+<!-- ================================================
      SCOREBOARD
 ================================================ -->
 <div id="screen-scoreboard" class="screen">
@@ -1769,6 +1937,59 @@ async function getKennzeichenTarget() {
   return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
 
+// ── REISE PARLAMENT: absurde Gesetze (KI-Swap-Punkt) ──
+const PARLAMENT_GESETZE = [
+  { text: 'Für 15 Min darf niemand das Wort „ich" benutzen', dauerMinuten: 15 },
+  { text: 'Der Fahrer darf 10 Min nur Fragen stellen, keine Aussagen', dauerMinuten: 10 },
+  { text: 'Wer lacht, spricht 5 Min mit einem Akzent', dauerMinuten: 5 },
+  { text: 'Den Fahrer 60 Min nur mit „Euer Ehren" ansprechen', dauerMinuten: 60 },
+  { text: 'Vor jedem Satz muss man sich räuspern (20 Min)', dauerMinuten: 20 },
+  { text: 'Niemand darf 10 Min „nein" sagen', dauerMinuten: 10 },
+  { text: 'Jeder muss seinen Sitznachbarn 30 Min siezen', dauerMinuten: 30 },
+  { text: 'Bei jedem Tunnel müssen alle laut jubeln (45 Min)', dauerMinuten: 45 },
+  { text: 'Wer flucht, muss ein Tier-Geräusch machen (15 Min)', dauerMinuten: 15 },
+  { text: '5 Min lang reden alle nur im Flüsterton', dauerMinuten: 5 },
+  { text: 'Jeder Satz muss mit „offiziell gesagt" enden (15 Min)', dauerMinuten: 15 },
+  { text: 'Der Beifahrer ist 30 Min „Navigations-Minister" und hat immer recht', dauerMinuten: 30 },
+  { text: '10 Min lang darf nur in Reimen gesprochen werden', dauerMinuten: 10 },
+  { text: 'Bei rotem Auto müssen alle „Achtung, rot!" rufen (20 Min)', dauerMinuten: 20 },
+  { text: 'Niemand darf 15 Min die Hände überkreuzen', dauerMinuten: 15 },
+  { text: 'Jeder muss 30 Min seinen Vornamen rückwärts sagen, wenn drangenommen', dauerMinuten: 30 },
+  { text: 'Wer aufs Handy schaut, singt eine Strophe (25 Min)', dauerMinuten: 25 },
+  { text: '5 Min lang sprechen alle wie ein Pirat', dauerMinuten: 5 },
+  { text: 'Komplimente sind 20 Min verboten', dauerMinuten: 20 },
+  { text: 'Jeder muss 15 Min jeden Satz mit „Moment mal" beginnen', dauerMinuten: 15 },
+  { text: 'Bei jeder Brücke wird kurz applaudiert (40 Min)', dauerMinuten: 40 },
+  { text: 'Der Fahrer vergibt 60 Min lang „Ordnungspunkte" nach Lust und Laune', dauerMinuten: 60 },
+  { text: '10 Min lang darf niemand das Wort „Auto" sagen', dauerMinuten: 10 },
+  { text: 'Jeder muss 20 Min mit übertrieben tiefer Stimme reden', dauerMinuten: 20 },
+  { text: 'Wer gähnt, muss den nächsten Snack ausgeben (30 Min)', dauerMinuten: 30 },
+  { text: '5 Min lang werden alle Fragen mit einer Gegenfrage beantwortet', dauerMinuten: 5 },
+  { text: 'Jeder muss 15 Min seine Sätze mit „bekanntlich" würzen', dauerMinuten: 15 },
+  { text: 'Niemand darf 25 Min die Musik-Lautstärke ändern', dauerMinuten: 25 },
+  { text: 'Bei jedem LKW ruft jeder eine Zahl zwischen 1 und 10 (20 Min)', dauerMinuten: 20 },
+  { text: 'Der jüngste Mitfahrer ist 30 Min „Premierminister" und bestimmt die Musik', dauerMinuten: 30 },
+  { text: '10 Min lang nur in der dritten Person über sich reden', dauerMinuten: 10 },
+  { text: 'Wer „ähm" sagt, klatscht einmal (15 Min)', dauerMinuten: 15 },
+  { text: 'Jeder muss 45 Min seinen Dank überschwänglich ausdrücken', dauerMinuten: 45 },
+  { text: '5 Min lang ist Lachen strengstens verboten', dauerMinuten: 5 },
+  { text: 'Jeder Halt an der Tanke beginnt mit einer Ansprache (60 Min)', dauerMinuten: 60 },
+  { text: 'Niemand darf 20 Min „cool" oder „geil" sagen', dauerMinuten: 20 },
+  { text: 'Jeder muss 15 Min jede Stadt, die er sieht, laut vorlesen', dauerMinuten: 15 },
+  { text: 'Der Beifahrer muss 30 Min jeden Spurwechsel ansagen', dauerMinuten: 30 },
+  { text: '10 Min lang sprechen alle nur im Plural („wir")', dauerMinuten: 10 },
+  { text: 'Wer einschläft, wird zum „Ehrengast" ernannt (40 Min)', dauerMinuten: 40 },
+  { text: 'Jeder muss 15 Min vor dem Trinken „Prost aufs Parlament" sagen', dauerMinuten: 15 },
+  { text: 'Bei jedem Ortsschild macht jeder ein zufriedenes „Mmmh" (25 Min)', dauerMinuten: 25 },
+  { text: '5 Min lang darf nur geflüstert UND gestikuliert werden', dauerMinuten: 5 },
+  { text: 'Jeder muss 20 Min seine Meinung mit „laut Gesetz" einleiten', dauerMinuten: 20 },
+  { text: 'Der Fahrer darf 30 Min jederzeit „Sitzungspause" ausrufen', dauerMinuten: 30 },
+];
+
+async function getParlamentVorschlaege(n) {
+  return _pickN(PARLAMENT_GESETZE, n); // n verschiedene Gesetze
+}
+
 // ================================================
 // 2. STATE
 // ================================================
@@ -1818,7 +2039,17 @@ const state = {
   kzMath: {
     target: null,          // aktuelle Zielzahl
   },
+
+  parlament: {
+    proposals: [],         // aktuelle 4 Vorschläge
+    chosen: null,          // gewähltes Gesetz
+    votes: {},             // { Gulli:'ja'|'nein', ... }
+    voteEndsAt: 0,         // Timestamp Ende der 10s-Abstimmung
+    voteTimer: null,       // Interval-ID
+  },
 };
+
+const LAWS_KEY = 'aktive_gesetze';   // localStorage-Key für aktive Gesetze
 
 // ================================================
 // 3. STORAGE
@@ -3178,6 +3409,173 @@ function kzPickSolver(player) {
 }
 
 // ================================================
+// 12e. REISE PARLAMENT
+// ================================================
+function loadLaws() {
+  try { return JSON.parse(localStorage.getItem(LAWS_KEY)) || []; } catch { return []; }
+}
+function saveLaws(laws) { localStorage.setItem(LAWS_KEY, JSON.stringify(laws)); }
+function lawRemaining(law) { return (law.startTime + law.durationMinutes * 60000) - Date.now(); }
+function pruneLaws() {
+  const laws = loadLaws().filter(l => lawRemaining(l) > 0);
+  saveLaws(laws);
+  return laws;
+}
+function fmtRemaining(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// App-weites Banner (läuft per Tick, unabhängig vom aktiven Screen)
+function renderLawBanner() {
+  const laws = pruneLaws();
+  const banner = document.getElementById('law-banner');
+  if (!banner) return;
+  if (!laws.length) {
+    banner.style.display = 'none';
+    document.body.classList.remove('has-laws');
+    return;
+  }
+  document.body.classList.add('has-laws');
+  banner.style.display = 'flex';
+  const first = laws[0];
+  const extra = laws.length > 1 ? ` (+${laws.length - 1})` : '';
+  banner.innerHTML = `
+    <span class="lb-icon">⚖️</span>
+    <span class="lb-text">${escapeHtml(first.text)}${extra}</span>
+    <span class="lb-time">${fmtRemaining(lawRemaining(first))}</span>`;
+}
+
+let _parlamentTick = null;
+function startParlamentTick() {
+  if (_parlamentTick) return;
+  _parlamentTick = setInterval(() => {
+    renderLawBanner();
+    if (document.getElementById('screen-parlament').classList.contains('active')) renderActiveLaws();
+  }, 1000);
+}
+
+function startParlament() {
+  renderActiveLaws();
+  showScreen('parlament');
+}
+
+function renderActiveLaws() {
+  const laws = pruneLaws();
+  const el = document.getElementById('parlament-active');
+  if (!el) return;
+  if (!laws.length) {
+    el.innerHTML = `<p class="muted center" style="font-size:0.9rem; padding:20px">Noch keine aktiven Gesetze.<br>Schlagt welche vor! 🔨</p>`;
+    return;
+  }
+  el.innerHTML = laws.map(l => `
+    <div class="law-active">
+      <div class="law-active-text">${escapeHtml(l.text)}</div>
+      <div class="law-active-time">⏳ ${fmtRemaining(lawRemaining(l))}</div>
+    </div>`).join('');
+}
+
+async function parlamentPropose() {
+  state.parlament.proposals = await getParlamentVorschlaege(4);
+  renderProposals();
+  showScreen('parlament-select');
+}
+
+function renderProposals() {
+  document.getElementById('parlament-proposals').innerHTML =
+    state.parlament.proposals.map((g, i) => `
+      <div class="law-choice" onclick="parlamentChoose(${i})">
+        <div class="law-choice-text">${escapeHtml(g.text)}</div>
+        <div class="law-choice-dur">⏱️ ${g.dauerMinuten} Min</div>
+      </div>`).join('');
+}
+
+function parlamentChoose(i) {
+  state.parlament.chosen = state.parlament.proposals[i];
+  state.parlament.votes = {};
+  state.parlament.voteEndsAt = Date.now() + 10000;
+  document.getElementById('parlament-vote-law').innerHTML =
+    `<div class="vote-law-text">${escapeHtml(state.parlament.chosen.text)}</div>
+     <div class="vote-law-dur">⏱️ ${state.parlament.chosen.dauerMinuten} Min, wenn angenommen</div>`;
+  renderVoteRows();
+  showScreen('parlament-vote');
+  if (state.parlament.voteTimer) clearInterval(state.parlament.voteTimer);
+  state.parlament.voteTimer = setInterval(parlamentVoteTick, 200);
+  parlamentVoteTick();
+}
+
+function parlamentVoteTick() {
+  const left = Math.ceil((state.parlament.voteEndsAt - Date.now()) / 1000);
+  const t = document.getElementById('parlament-vote-timer');
+  if (t) t.textContent = Math.max(0, left);
+  if (left <= 0) parlamentEvaluate();
+}
+
+function renderVoteRows() {
+  document.getElementById('parlament-vote-rows').innerHTML = PLAYERS.map(p => {
+    const v = state.parlament.votes[p];
+    return `
+      <div class="vote-row">
+        <span class="vote-name">${escapeHtml(p)}</span>
+        <button class="vote-btn ja ${v === 'ja' ? 'sel' : ''}" onclick="parlamentVote('${p}','ja')">Ja</button>
+        <button class="vote-btn nein ${v === 'nein' ? 'sel' : ''}" onclick="parlamentVote('${p}','nein')">Nein</button>
+      </div>`;
+  }).join('');
+}
+
+function parlamentVote(player, choice) {
+  state.parlament.votes[player] = choice;
+  renderVoteRows();
+  if (PLAYERS.every(p => state.parlament.votes[p])) parlamentEvaluate();
+}
+
+function parlamentCancelVote() {
+  if (state.parlament.voteTimer) { clearInterval(state.parlament.voteTimer); state.parlament.voteTimer = null; }
+  showScreen('parlament-select');
+}
+
+function parlamentEvaluate() {
+  if (state.parlament.voteTimer) { clearInterval(state.parlament.voteTimer); state.parlament.voteTimer = null; }
+  const votes = state.parlament.votes;
+  const ja   = PLAYERS.filter(p => votes[p] === 'ja').length;
+  const nein = PLAYERS.filter(p => votes[p] === 'nein').length;
+  const angenommen = ja > nein;   // Mehrheit; Gleichstand → nicht in Kraft
+  const law = state.parlament.chosen;
+
+  if (angenommen) {
+    const laws = pruneLaws();
+    laws.push({ text: law.text, startTime: Date.now(), durationMinutes: law.dauerMinuten });
+    saveLaws(laws);
+    renderLawBanner();
+  }
+
+  document.getElementById('parlament-result-emoji').textContent = angenommen ? '✅' : '❌';
+  document.getElementById('parlament-result-title').textContent =
+    angenommen ? 'Gesetz angenommen!' : 'Gesetz abgelehnt';
+  document.getElementById('parlament-result-law').innerHTML =
+    `<div class="vote-law-text">${escapeHtml(law.text)}</div>` +
+    (angenommen ? `<div class="vote-law-dur">⏱️ gilt ${law.dauerMinuten} Min</div>` : '');
+  document.getElementById('parlament-result-detail').textContent =
+    `Ja: ${ja} · Nein: ${nein}` + (ja === nein ? ' — Gleichstand, kein Beschluss' : '');
+
+  const primary = document.getElementById('parlament-result-primary');
+  if (angenommen) {
+    primary.textContent = '🏛️ Zu den aktiven Gesetzen';
+    primary.onclick = () => startParlament();
+  } else {
+    primary.textContent = '🔄 Neue 4 Vorschläge';
+    primary.onclick = () => parlamentPropose();
+  }
+
+  const r = document.getElementById('screen-parlament-result');
+  r.classList.remove('flash-ok', 'flash-fail');
+  void r.offsetWidth; // Reflow → Animation neu starten
+  r.classList.add(angenommen ? 'flash-ok' : 'flash-fail');
+  showScreen('parlament-result');
+}
+
+// ================================================
 // 13. SCOREBOARD
 // ================================================
 function renderScoreboard() {
@@ -3219,6 +3617,8 @@ function renderScoreboard() {
 (function init() {
   state.scores = loadScores();
   renderHomeScores();
+  renderLawBanner();      // aktive Gesetze beim Laden anzeigen
+  startParlamentTick();   // Countdown/Banner app-weit aktualisieren
 })();
 </script>
 </body>
